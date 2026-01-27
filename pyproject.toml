@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qctss-client"
+version = "0.1.0"
+description = "QCTSS Client SDK for quantum computing resource control"
+readme = "README.md"
+authors = [
+    {name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com"},
+]
+maintainers = [
+    {name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com"},
+]
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.28.0",
+    "websocket-client>=1.2.0", 
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/quantaser/qctss-client"
+Repository = "https://github.com/quantaser/qctss-client"
+"Bug Tracker" = "https://github.com/quantaser/qctss-client/issues"
