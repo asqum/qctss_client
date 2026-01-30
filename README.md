@@ -28,18 +28,40 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```python
+from qctss_client import QCTSSClient
+
+# Initialize client
+# personal token can be generated from QCTSS web portal
+client = QCTSSClient(token="your-personal-token")
+
+# check existing job status if you want to know the status of existing running / queued jobs
+job_statuses = client.get_my_jobs_status()
+for status in job_statuses:
+    print(f"Job {status.job_id} status: {status.status}")
+
+# Submit a job
+job_response = client.start_job(
+    qc_setup_list=["setup1", "setup2"],
+    service_name="service_name"
+)
+# get your job id in order to track it later
+print(f"Job submitted: with id:{job_response.job_id}")
+
+# monitor job with real-time updates
+# timeout is the max time(in seconds) you want to wait before starting to run job
+# after job started, you can have the assessing port to access the controller of the qcsetups of the job
+accessing_port = client.wait_until_running(job_id=job_response.job_id, timeout=300)
+
+# for QM controller access set the port bleow to start the pulse control.
 import quan_libs.components import QuAM
-from qctss_client.client import QCTSSClient
-
-my_client = QCTSSClient(token="5fc0518f539b9de9021803a3309c3fa4db4b20ca6710d1162b1bb5ca2b1ac3be")
-job_response = my_client.start_job()
-access_port = my_client.wait_until_running(job_id=job_response.job_id, timeout=120)
-
 machine = QuAM.load()
-machine.network['port']= access_port
+machine.network['port']= accessing_port
+# start your pulse control logic here ...
 
-my_client.close_job(job_id=job_response.job_id)
-my_client.close()
+# close the job
+client.close_job(job_id=job_response.job_id)
+# Clean up
+client.close()
 ```
 
 ## API Reference
