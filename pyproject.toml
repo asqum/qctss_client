@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -16,7 +16,7 @@ maintainers = [
 requires-python = ">=3.9"
 dependencies = [
     "requests>=2.28.0",
-    "websocket-client>=1.2.0", 
+    "websocket-client>=1.2.0",
     "pydantic>=2.0.0",
 ]
 
