@@ -39,7 +39,13 @@ class QCTSSClient:
             timeout: Request timeout in seconds (overrides config)
             max_retries: Max retry attempts (overrides config)
             retry_delay: Delay between retries in seconds (overrides config)
+            
+        Raises:
+            ValidationError: If token is empty or None
         """
+        if not token:
+            raise ValidationError("Token cannot be empty")
+        
         self.token = token
         self.config = BackendConfig(
             backend_url=backend_url,
@@ -186,7 +192,7 @@ class QCTSSClient:
         }
         
         try:
-            response_data = self._post("/api/job/start/", data=data)
+            response_data = self._post("/api/jobs/", data=data)
             return JobResponse(**response_data)
         
         except QCTSSException as e:
@@ -254,13 +260,13 @@ class QCTSSClient:
     
     def close_job(self, job_id: int) -> JobResponse:
         """
-        Close/cancel a job
+        Close a job (mark as completed)
         
         Args:
             job_id: Job ID to close
             
         Returns:
-            JobResponse with updated status
+            JobResponse with updated status (completed)
             
         Raises:
             JobNotFoundError: Job not found
@@ -273,8 +279,7 @@ class QCTSSClient:
             raise ValidationError(f"Invalid job_id: {job_id}. Must be positive integer.")
         
         try:
-            data = {"job_id": job_id}
-            response_data = self._post("/api/job/close/", data=data)
+            response_data = self._post(f"/api/jobs/{job_id}/close/")
             result = JobResponse(**response_data)
             
             # Disconnect WebSocket now that job is closed
@@ -289,6 +294,53 @@ class QCTSSClient:
                 from .exceptions import InvalidJobStateError
                 raise InvalidJobStateError(
                     f"Cannot close job {job_id}: {e.backend_message}",
+                    http_status=e.http_status,
+                    error_code=e.error_code,
+                    backend_message=e.backend_message,
+                    details=e.details
+                ) from e
+            else:
+                # Pass through other errors (404, 403, timeout, etc.)
+                raise
+    
+    def cancel_job(self, job_id: int, reason: Optional[str] = None) -> JobResponse:
+        """
+        Cancel a job
+        
+        Args:
+            job_id: Job ID to cancel
+            reason: Optional reason for cancellation
+            
+        Returns:
+            JobResponse with updated status (cancelled)
+            
+        Raises:
+            JobNotFoundError: Job not found
+            InvalidJobStateError: Job cannot be cancelled in current state
+            TimeoutError: Request timed out
+            ValidationError: Invalid job_id
+        """
+        # Validate job_id
+        if not isinstance(job_id, int) or job_id <= 0:
+            raise ValidationError(f"Invalid job_id: {job_id}. Must be positive integer.")
+        
+        try:
+            data = {"reason": reason or "User cancelled job"}
+            response_data = self._post(f"/api/jobs/{job_id}/cancel/", data=data)
+            result = JobResponse(**response_data)
+            
+            # Disconnect WebSocket now that job is cancelled
+            if job_id in self._websocket_connections:
+                self.unsubscribe_job_updates(job_id)
+            
+            return result
+        
+        except QCTSSException as e:
+            # Re-map specific errors for job cancellation context
+            if e.http_status == 409:  # Conflict - invalid state
+                from .exceptions import InvalidJobStateError
+                raise InvalidJobStateError(
+                    f"Cannot cancel job {job_id}: {e.backend_message}",
                     http_status=e.http_status,
                     error_code=e.error_code,
                     backend_message=e.backend_message,
