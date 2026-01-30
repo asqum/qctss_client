@@ -31,7 +31,7 @@ pip install -e ".[dev]"
 import quan_libs.components import QuAM
 from qctss_client.client import QCTSSClient
 
-my_client = QCTSSClient(token="5fc0518f539b9de9021803a3309c3fa4db4b20ca6710d1162b1bb5ca2b1ac3be")
+my_client = QCTSSClient(token="my-secret-token")
 job_response = my_client.start_job()
 access_port = my_client.wait_until_running(job_id=job_response.job_id, timeout=120)
 
