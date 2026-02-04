@@ -33,26 +33,16 @@ from qctss_client import QCTSSClient
 # Initialize client
 # personal token can be generated from QCTSS web portal
 
-client = QCTSSClien(token="e18cbe12d64055932603e33f6e53c6f6bb992a7c1d02cccaa18b05d7eab22119")
+client = QCTSSClient(token="my-personal-token")
 
-# check existing job status if you want to know the status of existing running / queued jobs
-job_statuses = client.get_my_jobs_status()
-for status in job_statuses:
-    print(f"Job {status.job_id} status: {status.status}")
 
-# Submit a job
 job_response = client.start_job(
     qc_setup_list=["Long Live ASQPU_DR0_OPX1000_3_2"],
     service_name="QPU Calibration"
 )
-
-
-# monitor job with real-time updates
-# timeout is the max time(in seconds) you want to wait before starting to run job
-# after job started, you can have the assessing port to access the controller of the qcsetups of the job
 accessing_port = client.wait_until_running(job_id=job_response.job_id, timeout=300)
 
-# for QM controller access set the port bleow to start the pulse control.
+
 import quan_libs.components import QuAM
 machine = QuAM.load()
 machine.network['port']= accessing_port
