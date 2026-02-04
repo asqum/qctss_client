@@ -30,11 +30,7 @@ pip install -e ".[dev]"
 ```python
 from qctss_client import QCTSSClient
 
-# Initialize client
-# personal token can be generated from QCTSS web portal
-
 client = QCTSSClient(token="my-personal-token")
-
 
 job_response = client.start_job(
     qc_setup_list=["Long Live ASQPU_DR0_OPX1000_3_2"],
@@ -46,11 +42,8 @@ accessing_port = client.wait_until_running(job_id=job_response.job_id, timeout=3
 import quan_libs.components import QuAM
 machine = QuAM.load()
 machine.network['port']= accessing_port
-# start your pulse control logic here ...
 
-# close the job
 client.close_job(job_id=job_response.job_id)
-# Clean up
 client.close()
 ```
 
