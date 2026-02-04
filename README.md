@@ -33,7 +33,7 @@ from qctss_client import QCTSSClient
 # Initialize client
 # personal token can be generated from QCTSS web portal
 
-client = QCTSSClient(token="your-personal-token")
+client = QCTSSClien(token="e18cbe12d64055932603e33f6e53c6f6bb992a7c1d02cccaa18b05d7eab22119")
 
 # check existing job status if you want to know the status of existing running / queued jobs
 job_statuses = client.get_my_jobs_status()
