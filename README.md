@@ -39,8 +39,6 @@ job_response = client.start_job(
 )
 accessing_port = client.wait_until_running(job_id=job_response.job_id, timeout=300)
 
-
-
 machine = QuAM.load()
 machine.network['port']= accessing_port
 
