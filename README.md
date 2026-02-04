@@ -32,6 +32,7 @@ from qctss_client import QCTSSClient
 
 # Initialize client
 # personal token can be generated from QCTSS web portal
+
 client = QCTSSClient(token="your-personal-token")
 
 # check existing job status if you want to know the status of existing running / queued jobs
@@ -41,11 +42,10 @@ for status in job_statuses:
 
 # Submit a job
 job_response = client.start_job(
-    qc_setup_list=["setup1", "setup2"],
-    service_name="service_name"
+    qc_setup_list=["Long Live ASQPU_DR0_OPX1000_3_2"],
+    service_name="QPU Calibration"
 )
-# get your job id in order to track it later
-print(f"Job submitted: with id:{job_response.job_id}")
+
 
 # monitor job with real-time updates
 # timeout is the max time(in seconds) you want to wait before starting to run job
