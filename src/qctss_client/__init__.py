@@ -4,9 +4,10 @@ QCTSS Client SDK
 A Python SDK for interacting with the QCTSS quantum computing platform.
 """
 
-__version__ = "0.1.0"
-__author__ = "QCTSS Team"
-__email__ = "dev@qctss.com"
+__version__ = "0.2.0"
+SDK_NAME = "qctss-client"
+__author__ = "Quantaser Photonics Co. Ltd."
+__email__ = "tina@quantaser.com"
 
 from .client import QCTSSClient
 from .exceptions import (
@@ -30,6 +31,7 @@ from .models import JobResponse, JobStatus, BillingData, WebSocketMessage
 
 __all__ = [
     "QCTSSClient",
+    "SDK_NAME",
     # Exceptions
     "QCTSSException",
     "ConfigError", 

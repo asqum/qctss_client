@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qctss-client"
-version = "0.1.1"
+version = "0.2.0"
 description = "QCTSS Client SDK for quantum computing resource control"
 readme = "README.md"
 authors = [

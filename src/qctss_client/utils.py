@@ -13,6 +13,14 @@ from .exceptions import QCTSSException, TimeoutError, map_http_error
 
 logger = logging.getLogger(__name__)
 
+# SDK identification for version checking
+try:
+    from importlib.metadata import version as _pkg_version
+    _SDK_VERSION = _pkg_version("qctss-client")
+except Exception:
+    _SDK_VERSION = "unknown"
+_SDK_NAME = "qctss-client"
+
 
 class RetryHTTPAdapter(HTTPAdapter):
     """
@@ -90,6 +98,8 @@ def make_request(
         "X-API-KEY": token,
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "X-SDK-Name": _SDK_NAME,
+        "X-SDK-Version": _SDK_VERSION,
     }
     if headers:
         request_headers.update(headers)

@@ -4,9 +4,16 @@ QCTSS Client main class
 from typing import List, Optional, Callable, Any, Dict
 import time
 import logging
+import json
+import requests
 
 from .config import BackendConfig
-from .exceptions import QCTSSException, ValidationError
+from .exceptions import (
+    QCTSSException, 
+    ValidationError, 
+    QCSetupNotActiveError, 
+    QCSetupNotFoundError
+)
 from .models import JobResponse, JobStatus
 from .websocket_manager import WebSocketManager
 from . import utils
@@ -548,3 +555,89 @@ class QCTSSClient:
         self._websocket_manager.disconnect_all()
         self._websocket_connections.clear()
         logger.info("RCCI Client closed")
+    
+    def download_qcsetup_config_file(
+        self,
+        qcsetup_names: List[str],
+    ) -> Dict[str, dict]:
+        """
+        批次下載多個 QCSetup 的 config 檔案（in-memory）。
+
+        Args:
+            qcsetup_names: QCSetup name list
+
+        Returns:
+            Dict[str, dict] - key 為 qcsetup_name，value 為該 config 的 dict
+
+        Raises:
+            QCSetupNotActiveError: QCSetup 狀態非 active
+            QCSetupNotFoundError: QCSetup 不存在
+        """
+        results = {}
+
+        for name in qcsetup_names:
+            url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-config/"
+            headers = {"X-API-KEY": self.token}  # 使用 client token
+
+            try:
+                response = requests.get(url, headers=headers, timeout=self.config.timeout)
+            except requests.RequestException as e:
+                raise Exception(f"Failed to connect to backend: {e}")
+
+            if response.status_code == 403:
+                raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
+            elif response.status_code == 404:
+                raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
+            elif response.status_code != 200:
+                raise Exception(f"Failed to download config for '{name}': {response.status_code} {response.text}")
+
+            # 解析 JSON 並存入 dict
+            try:
+                results[name] = response.json()
+            except json.JSONDecodeError as e:
+                raise Exception(f"Invalid JSON response for '{name}': {e}")
+
+        return results
+    
+    def download_qcsetup_wiring(
+        self,
+        qcsetup_names: List[str],
+    ) -> Dict[str, dict]:
+        """
+        批次下載多個 QCSetup 的 wiring 檔案（in-memory）。
+
+        Args:
+            qcsetup_names: QCSetup name list
+
+        Returns:
+            Dict[str, dict] - key 為 qcsetup_name，value 為該 wiring 的 dict
+
+        Raises:
+            QCSetupNotActiveError: QCSetup 狀態非 active
+            QCSetupNotFoundError: QCSetup 不存在
+        """
+        results = {}
+
+        for name in qcsetup_names:
+            url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-wiring/"
+            headers = {"X-API-KEY": self.token}
+
+            try:
+                response = requests.get(url, headers=headers, timeout=self.config.timeout)
+            except requests.RequestException as e:
+                raise Exception(f"Failed to connect to backend: {e}")
+
+            if response.status_code == 403:
+                raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
+            elif response.status_code == 404:
+                raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
+            elif response.status_code != 200:
+                raise Exception(f"Failed to download wiring for '{name}': {response.status_code} {response.text}")
+
+            # 解析 JSON 並存入 dict
+            try:
+                results[name] = response.json()
+            except json.JSONDecodeError as e:
+                raise Exception(f"Invalid JSON response for '{name}': {e}")
+
+        return results

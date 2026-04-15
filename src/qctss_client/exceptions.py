@@ -109,6 +109,16 @@ class TimeoutError(QCTSSException):
     pass
 
 
+class QCSetupNotActiveError(QCTSSException):
+    """QCSetup 狀態非 active"""
+    pass
+
+
+class QCSetupNotFoundError(QCTSSException):
+    """QCSetup 不存在"""
+    pass
+
+
 def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
     """
     Map HTTP status codes to appropriate SDK exceptions
