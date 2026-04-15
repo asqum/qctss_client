@@ -5,6 +5,7 @@ A Python SDK for interacting with the QCTSS platform.
 ## Features
 
 - **Job Management**: Submit, monitor, and manage quantum computing jobs
+- **QCSetup Management**: Download QCSetup config and wiring files
 - **Real-time Updates**: WebSocket-based real-time job status monitoring
 - **Robust Error Handling**: Comprehensive error handling with automatic retry logic
 - **Flexible Configuration**: Environment-based configuration with sensible defaults
@@ -32,6 +33,14 @@ from qctss_client import QCTSSClient
 import quan_libs.components import QuAM
 
 client = QCTSSClient(token="my-personal-token")
+
+# Download QCSetup config files
+configs = client.download_qcsetup_config_file(["qc1", "qc2"])
+for name, config in configs.items():
+    print(f"{name}: {config}")
+
+# Download QCSetup wiring files
+wirings = client.download_qcsetup_wiring(["qc1", "qc2"])
 
 job_response = client.start_job(
     qc_setup_list=["Long Live ASQPU_DR0_OPX1000_3_2"],
@@ -62,11 +71,67 @@ QCTSSClient(
 )
 ```
 
-- `token`: JWT authentication token (required)
+- `token`: authentication token (required)
 - `backend_url`: Backend API URL (overrides env config)
 - `timeout`: Request timeout in seconds (default: 30)
 - `max_retries`: Max retry attempts (default: 3)
 - `retry_delay`: Delay between retries (default: 5)
+#### download_qcsetup_config_file
+
+```python
+download_qcsetup_config_file(
+    qcsetup_names: List[str]
+) -> Dict[str, dict]
+```
+
+Download QCSetup config files for multiple QCSetups (client token required).
+
+**Parameters**:
+- `qcsetup_names`: List of QCSetup names (non-empty)
+
+**Returns**: Dict[str, dict] - key=QCSetup name, value=parsed config dict
+
+**Raises**:
+- `QCSetupNotActiveError`: QCSetup status is not 'active' (403)
+- `QCSetupNotFoundError`: QCSetup doesn't exist (404)
+- `AuthenticationError`: Invalid token
+- `TimeoutError`: Request timed out
+
+**Example**:
+```python
+configs = client.download_qcsetup_config_file(["qc1", "qc2", "qc3"])
+for name, config in configs.items():
+    print(f"{name}: {config}")
+```
+
+#### download_qcsetup_wiring
+
+```python
+download_qcsetup_wiring(
+    qcsetup_names: List[str]
+) -> Dict[str, dict]
+```
+
+Download QCSetup wiring files for multiple QCSetups (client token required).
+
+**Parameters**:
+- `qcsetup_names`: List of QCSetup names (non-empty)
+
+**Returns**: Dict[str, dict] - key=QCSetup name, value=parsed wiring dict
+
+**Raises**:
+- `QCSetupNotActiveError`: QCSetup status is not 'active' (403)
+- `QCSetupNotFoundError`: QCSetup doesn't exist (404)
+- `AuthenticationError`: Invalid token
+- `TimeoutError`: Request timed out
+
+**Example**:
+```python
+wirings = client.download_qcsetup_wiring(["qc1", "qc2"])
+for name, wiring in wirings.items():
+    print(f"{name}: {wiring}")
+```
+
 
 #### start_job
 
