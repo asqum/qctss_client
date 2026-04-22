@@ -2,6 +2,7 @@
 QCTSS Client main class
 """
 from typing import List, Optional, Callable, Any, Dict
+from pathlib import Path
 import time
 import logging
 import json
@@ -11,7 +12,8 @@ from .config import BackendConfig
 from .exceptions import (
     QCTSSException, 
     ValidationError, 
-    QCSetupNotActiveError, 
+    QCSetupConfigNotFoundError,
+    QCSetupNotActiveError,
     QCSetupNotFoundError
 )
 from .models import JobResponse, JobStatus
@@ -558,24 +560,27 @@ class QCTSSClient:
     
     def download_qcsetup_config_file(
         self,
-        qcsetup_names: List[str],
-    ) -> Dict[str, dict]:
+        paths: Dict[str, Path],
+    ) -> None:
         """
-        批次下載多個 QCSetup 的 config 檔案（in-memory）。
+        批次下載多個 QCSetup 的 config 檔案並儲存至指定絕對路徑。
 
         Args:
-            qcsetup_names: QCSetup name list
-
-        Returns:
-            Dict[str, dict] - key 為 qcsetup_name，value 為該 config 的 dict
+            paths: {qcsetup_name: 絕對路徑} 對映表
 
         Raises:
+            ValueError: 路徑非絕對路徑
             QCSetupNotActiveError: QCSetup 狀態非 active
+            QCSetupConfigNotFoundError: QCSetup 無 activated config
             QCSetupNotFoundError: QCSetup 不存在
         """
-        results = {}
+        for name, output_path in paths.items():
+            if not Path(output_path).is_absolute():
+                raise ValueError(f"Path for '{name}' must be absolute: {output_path}")
 
-        for name in qcsetup_names:
+        for name, output_path in paths.items():
+            output_path = Path(output_path)
+
             url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-config/"
             headers = {"X-API-KEY": self.token}  # 使用 client token
 
@@ -587,38 +592,41 @@ class QCTSSClient:
             if response.status_code == 403:
                 raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
             elif response.status_code == 404:
+                try:
+                    error_body = response.json()
+                except Exception:
+                    error_body = {}
+                if error_body.get("error") == "No activated config found":
+                    raise QCSetupConfigNotFoundError(f"QCSetup '{name}' has no activated config")
                 raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
             elif response.status_code != 200:
                 raise Exception(f"Failed to download config for '{name}': {response.status_code} {response.text}")
 
-            # 解析 JSON 並存入 dict
-            try:
-                results[name] = response.json()
-            except json.JSONDecodeError as e:
-                raise Exception(f"Invalid JSON response for '{name}': {e}")
-
-        return results
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(response.text, encoding='utf-8')
     
     def download_qcsetup_wiring(
         self,
-        qcsetup_names: List[str],
-    ) -> Dict[str, dict]:
+        paths: Dict[str, Path],
+    ) -> None:
         """
-        批次下載多個 QCSetup 的 wiring 檔案（in-memory）。
+        批次下載多個 QCSetup 的 wiring 檔案並儲存至指定絕對路徑。
 
         Args:
-            qcsetup_names: QCSetup name list
-
-        Returns:
-            Dict[str, dict] - key 為 qcsetup_name，value 為該 wiring 的 dict
+            paths: {qcsetup_name: 絕對路徑} 對映表
 
         Raises:
+            ValueError: 路徑非絕對路徑
             QCSetupNotActiveError: QCSetup 狀態非 active
             QCSetupNotFoundError: QCSetup 不存在
         """
-        results = {}
+        for name, output_path in paths.items():
+            if not Path(output_path).is_absolute():
+                raise ValueError(f"Path for '{name}' must be absolute: {output_path}")
 
-        for name in qcsetup_names:
+        for name, output_path in paths.items():
+            output_path = Path(output_path)
+
             url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-wiring/"
             headers = {"X-API-KEY": self.token}
 
@@ -634,10 +642,5 @@ class QCTSSClient:
             elif response.status_code != 200:
                 raise Exception(f"Failed to download wiring for '{name}': {response.status_code} {response.text}")
 
-            # 解析 JSON 並存入 dict
-            try:
-                results[name] = response.json()
-            except json.JSONDecodeError as e:
-                raise Exception(f"Invalid JSON response for '{name}': {e}")
-
-        return results
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(response.text, encoding='utf-8')

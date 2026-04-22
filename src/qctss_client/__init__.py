@@ -4,7 +4,7 @@ QCTSS Client SDK
 A Python SDK for interacting with the QCTSS quantum computing platform.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 SDK_NAME = "qctss-client"
 __author__ = "Quantaser Photonics Co. Ltd."
 __email__ = "tina@quantaser.com"
@@ -26,6 +26,9 @@ from .exceptions import (
     WebSocketAuthError,
     ValidationError,
     TimeoutError,
+    QCSetupNotActiveError,
+    QCSetupNotFoundError,
+    QCSetupConfigNotFoundError,
 )
 from .models import JobResponse, JobStatus, BillingData, WebSocketMessage
 
@@ -48,6 +51,9 @@ __all__ = [
     "WebSocketAuthError", 
     "ValidationError",
     "TimeoutError",
+    "QCSetupNotActiveError",
+    "QCSetupNotFoundError",
+    "QCSetupConfigNotFoundError",
     # Models
     "JobResponse",
     "JobStatus", 

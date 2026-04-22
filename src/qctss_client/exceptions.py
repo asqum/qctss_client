@@ -119,6 +119,11 @@ class QCSetupNotFoundError(QCTSSException):
     pass
 
 
+class QCSetupConfigNotFoundError(QCTSSException):
+    """QCSetup 存在但無 activated config"""
+    pass
+
+
 def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
     """
     Map HTTP status codes to appropriate SDK exceptions
