@@ -10,11 +10,12 @@ import requests
 
 from .config import BackendConfig
 from .exceptions import (
-    QCTSSException, 
-    ValidationError, 
+    QCTSSException,
+    ValidationError,
     QCSetupConfigNotFoundError,
     QCSetupNotActiveError,
-    QCSetupNotFoundError
+    QCSetupNotFoundError,
+    JobFailedError,
 )
 from .models import JobResponse, JobStatus
 from .websocket_manager import WebSocketManager
@@ -469,20 +470,22 @@ class QCTSSClient:
         final_status = None
         exception_holder = None
         
+        TERMINAL_STATES = {'cancelled', 'failed', 'timeout'}
+
         def on_status_update(status: JobStatus):
-            nonlocal final_status
-            
+            nonlocal final_status, exception_holder
+
             # Print status update
             print(f"\n[Job {job_id}] Status: {status.status}")
             if hasattr(status, 'queue_position') and status.queue_position is not None:
                 print(f"  Queue Position: {status.queue_position}")
             if hasattr(status, 'message') and status.message:
                 print(f"  Message: {status.message}")
-            
+
             # Call user's callback if provided
             if on_status:
                 on_status(status)
-            
+
             logger.debug(f"Job {job_id} status: {status.status}")
             time.sleep(0.2)
             # Check if job has started running
@@ -494,15 +497,20 @@ class QCTSSClient:
                 # Schedule WebSocket disconnect asynchronously to avoid blocking
                 # (callback is running in WebSocket thread)
                 def defer_disconnect():
-                    
                     time.sleep(0.2)  # Wait for event.set() to propagate
                     try:
                         if job_id in self._websocket_connections:
                             self.unsubscribe_job_updates(job_id)
                     except Exception as e:
                         print(f"Error during deferred disconnect for job {job_id}: {e}")
-                
+
                 threading.Thread(target=defer_disconnect, daemon=True).start()
+            elif status.status in TERMINAL_STATES:
+                print(f"[Job {job_id}] ENDED with status '{status.status}'")
+                exception_holder = JobFailedError(
+                    f"Job {job_id} ended with status '{status.status}'"
+                )
+                job_running_event.set()  # Signal to exit waiting immediately
         
         def on_error(error: Exception):
             nonlocal exception_holder

@@ -74,6 +74,11 @@ class InvalidJobStateError(JobClientError):
     pass
 
 
+class JobFailedError(JobClientError):
+    """Job ended in a terminal failure state (cancelled/failed/timeout)"""
+    pass
+
+
 class BillingClientError(QCTSSException):
     """Billing-related errors"""
     pass
