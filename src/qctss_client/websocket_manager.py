@@ -106,7 +106,7 @@ class WebSocketManager:
         # Start connection in separate thread
         def run_websocket():
             try:
-                ws.run_forever()
+                ws.run_forever(ping_interval=30, ping_timeout=10)
             except Exception as e:
                 logger.error(f"WebSocket thread error for job {job_id}: {e}")
                 self._error_callbacks[job_id](WebSocketConnectionError(f"Thread error: {e}"))
