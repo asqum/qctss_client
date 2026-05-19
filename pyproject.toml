@@ -4,9 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qctss-client"
-version = "0.3.0"
+dynamic = ["version", "readme"]
 description = "QCTSS Client SDK for quantum computing resource control"
-readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com"},
@@ -43,12 +42,16 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/quantaser/qctss-client"
-Repository = "https://github.com/quantaser/qctss-client"
-"Bug Tracker" = "https://github.com/quantaser/qctss-client/issues"
+Homepage = "https://github.com/asqum/qctss-client"
+Repository = "https://github.com/asqum/qctss-client"
+"Bug Tracker" = "https://github.com/asqum/qctss-client/issues"
 
 [project.scripts]
 qctss-client = "qctss_client.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "qctss_client.__version__" }
+readme = { file = "README.md", content-type = "text/markdown" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -63,3 +66,32 @@ python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+# This will need to be updated when we start to support Python 3.10+ specific syntax.
+
+lint.select = [
+    "E4",
+    "E7",
+    "E9", # pycodestyle errors
+    "F",  # Pyflakes
+]
+lint.ignore = ["F401", "E203", "W291", "F841"]
+lint.extend-select = ["E501"]
+# Ruff is intentionally to ignore the check of line length
+# See: https://github.com/astral-sh/ruff/issues/6424#issuecomment-2079623192
+
+[tool.ruff.lint.per-file-ignores]
+# "**/{tests,docs,tools}/*" = ["E402"]
+"__init__.py" = ["E402", "F401"]
+# module level import of this package need before boorust setup
+
+# Respecting command line options of ruff
+# This will be useful when you configure ruff in your IDE
+# ruff check 
+# --line-length=100 --target-version=py310 --select=E4,E7,E9,F 
+# --ignore=F401,E203,W291,F841
+# Or with format:
+# ruff format --line-length=100 ./
