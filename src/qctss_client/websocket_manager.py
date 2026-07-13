@@ -1,12 +1,12 @@
-"""
-WebSocket manager for real-time job status monitoring
+"""WebSocket manager for real-time job status monitoring.
+(:mod:`qctss_client.websocket_manager`)
+
 """
 
 import json
 import logging
 import threading
-import time
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable
 from urllib.parse import urlparse, parse_qs, urlencode
 import websocket
 
@@ -16,35 +16,39 @@ from .models import WebSocketMessage, JobStatus
 logger = logging.getLogger(__name__)
 
 
+def default_error_handler(e: Exception) -> None:
+    """Default error handler for WebSocket errors"""
+    logger.error(f"WebSocket error: {e}")
+
+
 class WebSocketManager:
-    """
-    Manages WebSocket connections for job status monitoring
-    """
+    """Manages WebSocket connections for job status monitoring"""
 
     def __init__(self):
-        self._connections: Dict[int, websocket.WebSocketApp] = {}
-        self._callbacks: Dict[int, Callable[[JobStatus], None]] = {}
-        self._error_callbacks: Dict[int, Callable[[Exception], None]] = {}
-        self._threads: Dict[int, threading.Thread] = {}
-        self._running: Dict[int, bool] = {}
+        self._connections: dict[int, websocket.WebSocketApp] = {}
+        self._callbacks: dict[int, Callable[[JobStatus], None]] = {}
+        self._error_callbacks: dict[int, Callable[[Exception], None]] = {}
+        self._threads: dict[int, threading.Thread] = {}
+        self._running: dict[int, bool] = {}
 
     def connect(
         self,
         job_id: int,
         websocket_url: str,
         token: str,
-        callback: Callable[[JobStatus], None],
-        on_error: Optional[Callable[[Exception], None]] = None,
+        callback: Optional[Callable[[JobStatus], None]] = None,
+        handle_error: Optional[Callable[[Exception], None]] = None,
     ) -> None:
-        """
-        Establish WebSocket connection for job monitoring
+        """Establish WebSocket connection for job monitoring
 
         Args:
-            job_id: Job ID to monitor
-            websocket_url: WebSocket server URL
-            token: Authentication token
-            callback: Function called with job status updates
-            on_error: Optional error handler
+            job_id (int): Job ID to monitor
+            websocket_url (str): WebSocket server URL
+            token (str): Authentication token
+            callback (Optional[Callable[[JobStatus], None]]):
+                Function called with job status updates
+            handle_error (Optional[Callable[[Exception], None]]):
+                Optional function called on errors
 
         Raises:
             WebSocketConnectionError: Connection failed
@@ -54,10 +58,12 @@ class WebSocketManager:
             logger.warning(f"Job {job_id} already has active connection")
             return
 
-        self._callbacks[job_id] = callback
-        self._error_callbacks[job_id] = on_error or (
-            lambda e: logger.error(f"WebSocket error: {e}")
+        if callback is not None:
+            self._callbacks[job_id] = callback
+        self._error_callbacks[job_id] = (
+            handle_error if handle_error is not None else default_error_handler
         )
+
         self._running[job_id] = True
 
         # Create WebSocket URL with token parameter
@@ -71,12 +77,12 @@ class WebSocketManager:
 
         logger.info(f"Connecting to WebSocket: {url}")
 
-        def on_open(ws):
+        def on_open(ws: websocket.WebSocketApp):
             logger.info(f"WebSocket connected for job {job_id}")
             # Authentication now handled via URL parameter (token)
             # No need to send AuthMessage per 2026-01-07 specification
 
-        def on_message(ws, message):
+        def on_message(ws: websocket.WebSocketApp, message: str):
             try:
                 logger.info(f"[WS_RAW_MESSAGE] job {job_id}: {message[:100]}")
                 data = json.loads(message)
@@ -89,13 +95,15 @@ class WebSocketManager:
                         WebSocketError(f"Message processing error: {e}")
                     )
 
-        def on_error(ws, error):
+        def on_error(ws: websocket.WebSocketApp, error: str):
             logger.error(f"WebSocket error for job {job_id}: {error}")
             self._error_callbacks[job_id](
                 WebSocketConnectionError(f"Connection error: {error}")
             )
 
-        def on_close(ws, close_status_code, close_msg):
+        def on_close(
+            ws: websocket.WebSocketApp, close_status_code: int, close_msg: str
+        ):
             logger.info(f"WebSocket closed for job {job_id}: {close_status_code}")
             self._cleanup_connection(job_id)
 
@@ -125,11 +133,10 @@ class WebSocketManager:
         thread.start()
 
     def disconnect(self, job_id: int) -> None:
-        """
-        Disconnect WebSocket for specific job
+        """Disconnect WebSocket for specific job
 
         Args:
-            job_id: Job ID to disconnect
+            job_id (int): Job ID to disconnect
         """
         if job_id not in self._connections:
             return
@@ -168,18 +175,17 @@ class WebSocketManager:
         self._cleanup_connection(job_id)
 
     def disconnect_all(self) -> None:
-        """Disconnect all WebSocket connections"""
+        """Disconnect all WebSocket connections."""
         job_ids = list(self._connections.keys())
         for job_id in job_ids:
             self.disconnect(job_id)
 
     def _handle_message(self, job_id: int, message: WebSocketMessage) -> None:
-        """
-        Handle incoming WebSocket message
+        """Handle incoming WebSocket message
 
         Args:
-            job_id: Job ID
-            message: WebSocket message
+            job_id (int): Job ID
+            message (WebSocketMessage): WebSocket message
         """
         logger.info(f"[WS_RECEIVED] job {job_id} message: {message.type}")
 
@@ -210,9 +216,12 @@ class WebSocketManager:
             job_status = message.to_job_status()
             if job_status:
                 logger.info(
-                    f"[WS_CALLBACK] Calling status callback for job {job_id}, status: {job_status.status}"
+                    f"[WS_CALLBACK] Calling status callback for job {job_id}, "
+                    + f"status: {job_status.status}"
                 )
-                self._callbacks[job_id](job_status)
+                # Hi, Walrus here :=
+                if (callback := self._callbacks.get(job_id, None)) is not None:
+                    callback(job_status)
 
                 # Auto-disconnect if job reaches terminal state
                 if job_status.is_terminal:

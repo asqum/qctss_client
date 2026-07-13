@@ -1,32 +1,53 @@
-"""
-Utility functions for HTTP requests and retry logic
-"""
+"""Utility functions for HTTP requests and retry logic (:mod:`qctss_client.utils`)"""
 
-import time
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Any, Optional
+import warnings
 from urllib.parse import urljoin
+from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
-from .exceptions import QCTSSException, QCTSSTimeoutError, map_http_error
+from .exceptions import (
+    QCTSSException,
+    QCTSSTimeoutError,
+    InvalidPackageInfo,
+    map_http_error,
+)
 
 logger = logging.getLogger(__name__)
 
-# SDK identification for version checking
-try:
-    from importlib.metadata import version as _pkg_version
 
-    _SDK_VERSION = _pkg_version("qctss-client")
-except Exception:
-    _SDK_VERSION = "unknown"
+def _get_sdk_version() -> str:
+    """Get the SDK version for identification in requests"""
+    try:
+        from importlib.metadata import version as _pkg_version
+
+        return _pkg_version("qctss-client")
+    except (ImportError, ValueError) as e:
+        warnings.warn(
+            f"Could not retrieve SDK version. Due to {e}",
+            InvalidPackageInfo,
+        )
+        return "unknown"
+
+
 _SDK_NAME = "qctss-client"
+"""SDK name for identification in requests"""
+
+_SDK_VERSION = _get_sdk_version()
+"""SDK version for identification in requests"""
 
 
 class RetryHTTPAdapter(HTTPAdapter):
-    """
-    HTTP adapter with custom retry logic
+    """HTTP adapter with custom retry logic.
+
+    This adapter retries requests on server errors (5xx) and connection errors,
+    with a configurable number of retries and delay between retries.
+
+    Args:
+        max_retries (int): Maximum number of retry attempts. Default is 3.
+        retry_delay (int): Base delay between retries in seconds. Default is 5.
     """
 
     def __init__(self, max_retries: int = 3, retry_delay: int = 5):
@@ -49,15 +70,14 @@ class RetryHTTPAdapter(HTTPAdapter):
 
 
 def create_session(max_retries: int = 3, retry_delay: int = 5) -> requests.Session:
-    """
-    Create a requests session with retry configuration
+    """Create a requests session with retry configuration
 
     Args:
-        max_retries: Maximum number of retry attempts
-        retry_delay: Base delay between retries in seconds
+        max_retries (int): Maximum number of retry attempts. Default is 3.
+        retry_delay (int): Base delay between retries in seconds. Default is 5.
 
     Returns:
-        Configured requests session
+        requests.Session: Configured requests session
     """
     session = requests.Session()
     adapter = RetryHTTPAdapter(max_retries=max_retries, retry_delay=retry_delay)
@@ -74,31 +94,30 @@ def make_request(
     timeout: int = 30,
     max_retries: int = 3,
     retry_delay: int = 5,
-    data: Optional[Dict[str, Any]] = None,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, str]] = None,
+    data: Optional[dict[str, Any]] = None,
+    params: Optional[dict[str, Any]] = None,
+    headers: Optional[dict[str, str]] = None,
 ) -> requests.Response:
-    """
-    Make HTTP request with retry logic and error handling
+    """Make HTTP request with retry logic and error handling
 
     Args:
-        method: HTTP method (GET, POST, etc.)
-        base_url: Base URL for the API
-        endpoint: API endpoint path
-        token: Authentication token
-        timeout: Request timeout in seconds
-        max_retries: Maximum retry attempts
-        retry_delay: Delay between retries
-        data: Request body data
-        params: Query parameters
-        headers: Additional headers
+        method (str): HTTP method (GET, POST, etc.)
+        base_url (str): Base URL for the API
+        endpoint (str): API endpoint path
+        token (str): Authentication token
+        timeout (int): Request timeout in seconds
+        max_retries (int): Maximum retry attempts. Default is 3.
+        retry_delay (int): Delay between retries in seconds. Default is 5.
+        data (Optional[dict[str, Any]]): Request body data
+        params (Optional[dict[str, Any]]): Query parameters
+        headers (Optional[dict[str, str]]): Additional headers
 
     Returns:
-        Response object
+        requests.Response: Response object
 
     Raises:
         QCTSSException: On HTTP errors
-        TimeoutError: On timeout
+        QCTSSTimeoutError: On timeout
     """
     url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
 
@@ -118,7 +137,7 @@ def make_request(
     session = create_session(max_retries=max_retries, retry_delay=retry_delay)
 
     try:
-        logger.debug(f"Making {method} request to {url}")
+        logger.debug("Making %s request to %s", method, url)
 
         response = session.request(
             method=method,
@@ -132,21 +151,23 @@ def make_request(
         # Handle HTTP errors
         if not response.ok:
             error = map_http_error(response.status_code, response.text)
-            logger.error(f"HTTP {response.status_code} error: {response.text}")
+            logger.error("HTTP %s error: %s", response.status_code, response.text)
             raise error
 
-        logger.debug(f"Request successful: {method} {url} -> {response.status_code}")
+        logger.debug(
+            "Request successful: %s %s -> %s", method, url, response.status_code
+        )
         return response
 
     except requests.exceptions.Timeout as e:
-        logger.error(f"Request timeout: {url}")
+        logger.error("Request timeout: %s", url)
         raise QCTSSTimeoutError(
             f"Request timed out after {timeout}s",
             details={"url": url, "timeout": timeout},
         ) from e
 
     except requests.exceptions.ConnectionError as e:
-        logger.error(f"Connection error: {url}")
+        logger.error("Connection error: %s", url)
         raise QCTSSException(
             f"Connection failed to {url}",
             error_code="CONNECTION_ERROR",
@@ -154,7 +175,7 @@ def make_request(
         ) from e
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error: {url} - {str(e)}")
+        logger.error("Request error: %s - %s", url, str(e))
         raise QCTSSException(
             f"Request failed: {str(e)}",
             error_code="REQUEST_ERROR",
@@ -172,10 +193,18 @@ def get(
     timeout: int = 30,
     max_retries: int = 3,
     retry_delay: int = 5,
-    params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """
-    Convenience function for GET requests
+    params: Optional[dict[str, Any]] = None,
+) -> Any:
+    """Convenience function for GET requests
+
+    Args:
+        base_url (str): Base URL for the API
+        endpoint (str): API endpoint path
+        token (str): Authentication token
+        timeout (int): Request timeout in seconds
+        max_retries (int): Maximum retry attempts. Default is 3.
+        retry_delay (int): Delay between retries in seconds. Default is 5.
+        params (Optional[dict[str, Any]]): Query parameters. Default is None.
 
     Returns:
         Parsed JSON response data
@@ -197,13 +226,21 @@ def post(
     base_url: str,
     endpoint: str,
     token: str,
-    data: Optional[Dict[str, Any]] = None,
+    data: Optional[dict[str, Any]] = None,
     timeout: int = 30,
     max_retries: int = 3,
     retry_delay: int = 5,
-) -> Dict[str, Any]:
-    """
-    Convenience function for POST requests
+) -> Any:
+    """Convenience function for POST requests
+
+    Args:
+        base_url (str): Base URL for the API
+        endpoint (str): API endpoint path
+        token (str): Authentication token
+        data (Optional[dict[str, Any]]): Request body data. Default is None.
+        timeout (int): Request timeout in seconds. Default is 30.
+        max_retries (int): Maximum retry attempts. Default is 3.
+        retry_delay (int): Delay between retries in seconds. Default is 5.
 
     Returns:
         Parsed JSON response data
@@ -225,13 +262,21 @@ def put(
     base_url: str,
     endpoint: str,
     token: str,
-    data: Optional[Dict[str, Any]] = None,
+    data: Optional[dict[str, Any]] = None,
     timeout: int = 30,
     max_retries: int = 3,
     retry_delay: int = 5,
-) -> Dict[str, Any]:
-    """
-    Convenience function for PUT requests
+) -> Any:
+    """Convenience function for PUT requests
+
+    Args:
+        base_url (str): Base URL for the API
+        endpoint (str): API endpoint path
+        token (str): Authentication token
+        data (Optional[dict[str, Any]]): Request body data. Default is None.
+        timeout (int): Request timeout in seconds. Default is 30.
+        max_retries (int): Maximum retry attempts. Default is 3.
+        retry_delay (int): Delay between retries in seconds. Default is 5.
 
     Returns:
         Parsed JSON response data
@@ -256,9 +301,16 @@ def delete(
     timeout: int = 30,
     max_retries: int = 3,
     retry_delay: int = 5,
-) -> Optional[Dict[str, Any]]:
-    """
-    Convenience function for DELETE requests
+) -> Optional[Any]:
+    """Convenience function for DELETE requests
+
+    Args:
+        base_url (str): Base URL for the API
+        endpoint (str): API endpoint path
+        token (str): Authentication token
+        timeout (int): Request timeout in seconds. Default is 30.
+        max_retries (int): Maximum retry attempts. Default is 3.
+        retry_delay (int): Delay between retries in seconds. Default is 5.
 
     Returns:
         Parsed JSON response data or None if no content
@@ -282,7 +334,7 @@ def validate_job_id(job_id: int) -> None:
     """Validate job ID parameter
 
     Args:
-        job_id: Job ID to validate
+        job_id (int): Job ID to validate
 
     Raises:
         ValidationError: If job_id is invalid
@@ -293,11 +345,11 @@ def validate_job_id(job_id: int) -> None:
         raise ValidationError("Job ID must be a positive integer")
 
 
-def validate_qc_setup_list(qc_setup_list) -> None:
+def validate_qc_setup_list(qc_setup_list: list[str]) -> None:
     """Validate QC setup list parameter
 
     Args:
-        qc_setup_list: QC setup list to validate
+        qc_setup_list (list[str]): QC setup list to validate
 
     Raises:
         ValidationError: If qc_setup_list is invalid

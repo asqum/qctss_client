@@ -1,14 +1,10 @@
-"""
-Exception hierarchy for QCTSS Client SDK
-"""
+"""Exception hierarchy for QCTSS Client SDK (:mod:`qctss_client.exceptions`)"""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 
 
 class QCTSSException(Exception):
-    """
-    Base exception for all QCTSS Client errors
-    """
+    """Base exception for all QCTSS Client errors."""
 
     def __init__(
         self,
@@ -16,7 +12,7 @@ class QCTSSException(Exception):
         http_status: Optional[int] = None,
         error_code: Optional[str] = None,
         backend_message: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(message)
         self.message = message
@@ -99,7 +95,7 @@ class WebSocketAuthError(WebSocketError):
 
 
 # Validation and QCSetup-related exceptions
-class ValidationError(QCTSSException):
+class ValidationError(QCTSSException, ValueError):
     """Input validation errors"""
 
 
@@ -174,3 +170,7 @@ def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
         backend_message=response_text,
         details=error_details,
     )
+
+
+class InvalidPackageInfo(QCTSSException, Warning):
+    """Raised when package information cannot be retrieved or is invalid"""

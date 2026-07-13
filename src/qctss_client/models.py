@@ -3,8 +3,30 @@ Pydantic data models for RCCI Client SDK
 """
 
 from datetime import datetime
-from typing import Optional, List, Any, Dict, Union
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import Optional, Any, Union
+from pydantic import BaseModel as PydanticBaseModel, Field, ConfigDict, model_validator
+
+
+class BaseModel(PydanticBaseModel):
+    """Local base model with friendlier notebook rendering."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None:
+        """Render a compact multiline representation in IPython/Jupyter."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+            return
+
+        fields = self.model_dump(exclude_none=True)
+        p.begin_group(2, f"{self.__class__.__name__}(")
+        for index, (name, value) in enumerate(fields.items()):
+            if index:
+                p.text(",")
+                p.breakable()
+            p.text(f"{name}=")
+            p.pretty(value)
+        p.end_group(2, ")")
 
 
 class JobResponse(BaseModel):
@@ -25,10 +47,10 @@ class JobResponse(BaseModel):
     status: Optional[str] = Field(default=None, description="Job status")
 
     # New API format support - optional nested structure
-    job: Optional[Dict[str, Any]] = Field(
+    job: Optional[dict[str, Any]] = Field(
         default=None, description="Job details (new format)"
     )
-    job_threads: List[Dict[str, Any]] = Field(
+    job_threads: list[dict[str, Any]] = Field(
         default_factory=list, description="Job threads created"
     )
     total_requested_setups: Optional[int] = Field(
@@ -38,10 +60,10 @@ class JobResponse(BaseModel):
         default=None, description="Total created threads"
     )
     service_name: Optional[str] = Field(default=None, description="Service name")
-    token_info: Optional[Dict[str, Any]] = Field(
+    token_info: Optional[dict[str, Any]] = Field(
         default=None, description="Token information"
     )
-    thread_errors: Optional[List[Dict[str, Any]]] = Field(
+    thread_errors: Optional[list[dict[str, Any]]] = Field(
         default=None, description="Thread creation errors"
     )
 
@@ -97,10 +119,10 @@ class JobStatus(BaseModel):
     )
     job_start: Optional[datetime] = Field(
         default=None, description="Job start timestamp"
-    )  # 添加 FastAPI 返回的字段
+    )
     timeout_at: Optional[datetime] = Field(
         default=None, description="Job timeout timestamp"
-    )  # 添加 FastAPI 返回的字段
+    )
     started_at: Optional[datetime] = Field(
         default=None, description="Job start timestamp"
     )
@@ -113,7 +135,7 @@ class JobStatus(BaseModel):
     service_name: Optional[str] = Field(
         default=None, description="Service used for this job"
     )
-    qc_setup_list: Optional[List[str]] = Field(
+    qc_setup_list: Optional[list[str]] = Field(
         default=None, description="QC setups used"
     )
 
@@ -140,7 +162,7 @@ class BillingData(BaseModel):
     total_usage: float = Field(ge=0.0, description="Total usage amount")
     total_cost: float = Field(ge=0.0, description="Total cost")
     currency: str = Field(default="USD", description="Currency code")
-    details: Optional[Dict[str, Any]] = Field(
+    details: Optional[dict[str, Any]] = Field(
         default=None, description="Additional billing details"
     )
 
@@ -183,12 +205,16 @@ class WebSocketMessage(BaseModel):
             port_number=self.port_number,
             progress=self.progress,
             estimated_completion=self.estimated_completion,
-            created_at=self.timestamp
-            if isinstance(self.timestamp, datetime)
-            else datetime.now(),
-            updated_at=self.timestamp
-            if isinstance(self.timestamp, datetime)
-            else datetime.now(),
+            created_at=(
+                self.timestamp
+                if isinstance(self.timestamp, datetime)
+                else datetime.now()
+            ),
+            updated_at=(
+                self.timestamp
+                if isinstance(self.timestamp, datetime)
+                else datetime.now()
+            ),
         )
 
 
