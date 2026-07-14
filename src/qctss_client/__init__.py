@@ -27,7 +27,7 @@ from .exceptions import (
 )
 from .models import JobResponse, JobStatus, BillingData, WebSocketMessage
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 SDK_NAME = "qctss-client"
 
 
