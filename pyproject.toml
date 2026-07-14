@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "qctss-client"
 dynamic = ["version", "readme"]
 description = "QCTSS Client SDK for quantum computing resource control"
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-    {name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com"},
+    { name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com" },
 ]
 maintainers = [
-    {name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com"},
+    { name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 keywords = ["quantum", "computing", "sdk", "qctss", "client"]
 requires-python = ">=3.9"
@@ -34,12 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
-]
+dev = ["pytest>=7.0.0", "black>=23.0.0", "flake8>=6.0.0", "mypy>=1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/asqum/qctss-client"
@@ -67,10 +63,27 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 
+[tool.pylint."messages control"]
+disable = [
+    "too-many-instance-attributes",  # R0902
+    "too-few-public-methods",        # R0903
+    "too-many-public-methods",       # R0904
+    "too-many-branches",             # R0912
+    "too-many-arguments",            # R0913
+    "too-many-locals",               # R0914
+    "too-many-statements",           # R0915
+    "too-many-positional-arguments", # R0917
+    "too-many-nested-blocks",        # R1702
+]
+# Respecting command line options of pylint
+# This will be useful when you configure pylint in your IDE
+# pylint ./src
+# --max-line-length=88
+# --disable=R0902,R0903,R0904,R0912,R0913,R0914,R0915,R0917,R1702
+
 [tool.ruff]
 line-length = 88
 target-version = "py39"
-# This will need to be updated when we start to support Python 3.10+ specific syntax.
 
 lint.select = [
     "E4",
@@ -83,15 +96,10 @@ lint.extend-select = ["E501"]
 # Ruff is intentionally to ignore the check of line length
 # See: https://github.com/astral-sh/ruff/issues/6424#issuecomment-2079623192
 
-[tool.ruff.lint.per-file-ignores]
-# "**/{tests,docs,tools}/*" = ["E402"]
-"__init__.py" = ["E402", "F401"]
-# module level import of this package need before boorust setup
-
 # Respecting command line options of ruff
 # This will be useful when you configure ruff in your IDE
 # ruff check 
-# --line-length=100 --target-version=py310 --select=E4,E7,E9,F 
-# --ignore=F401,E203,W291,F841
+# --line-length=88 --target-version=py39 --select=E4,E7,E9,F 
+# --ignore=F401,E203,W291,F841 --extend-select=E501 ./src
 # Or with format:
-# ruff format --line-length=100 ./
+# ruff format --line-length=88 ./src
