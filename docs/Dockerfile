@@ -17,15 +17,10 @@ RUN mkdir -p /usr/share/fonts/truetype/roboto-flex && \
 RUN fc-cache -fv
 
 # Prepare Python environment
-RUN uv python install 3.13
-RUN uv venv /.venv --python python3.13
+RUN uv python install 3.12
+RUN uv venv /.venv --python python3.12
 ENV PATH="/.venv/bin:${PATH}"
 
-WORKDIR /tmp/docs-build
-
-# Install documentation dependencies. The project source is mounted at runtime.
-COPY docs/requirements.txt /tmp/docs-build/requirements.txt
-RUN uv pip install --upgrade pip setuptools wheel && \
-    uv pip install -r /tmp/docs-build/requirements.txt
+RUN uv pip install --upgrade pip setuptools wheel
 
 WORKDIR /app

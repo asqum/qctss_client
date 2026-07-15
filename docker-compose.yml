@@ -17,7 +17,7 @@ services:
         echo "| Python: $(python --version 2>&1)"
         echo "| git-hash: $(git log -n1 --format=%h --abbrev=7)"
         echo "----------------------------------------------------------------------"
-        uv pip install -e /app
+        uv pip install -e "/app[docs]"
         rm -rf /app/docs/_generated /app/docs/_dist
         sphinx-build -b html /app/docs /app/docs/_dist
         echo "----------------------------------------------------------------------"
