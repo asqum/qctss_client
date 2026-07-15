@@ -543,7 +543,10 @@ class QCTSSClient:
         for name, output_path in paths.items():
             output_path = Path(output_path)
 
-            url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-config/"
+            url = (
+                f"{self.config.backend_url}/api/"
+                + f"qc-setups/by-name/{name}/download-config/"
+            )
             headers = {"X-API-KEY": self.token}  # 使用 client token
 
             try:
@@ -567,7 +570,8 @@ class QCTSSClient:
                 raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
             elif response.status_code != 200:
                 raise Exception(
-                    f"Failed to download config for '{name}': {response.status_code} {response.text}"
+                    "Failed to download config for "
+                    + f"'{name}': {response.status_code} {response.text}"
                 )
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -603,15 +607,16 @@ class QCTSSClient:
                     url, headers=headers, timeout=self.config.timeout
                 )
             except requests.RequestException as e:
-                raise Exception(f"Failed to connect to backend: {e}")
+                raise QCTSSException(f"Failed to connect to backend: {e}")
 
             if response.status_code == 403:
                 raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
             elif response.status_code == 404:
                 raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
             elif response.status_code != 200:
-                raise Exception(
-                    f"Failed to download wiring for '{name}': {response.status_code} {response.text}"
+                raise QCTSSException(
+                    "Failed to download wiring for "
+                    + "'{name}': {response.status_code} {response.text}"
                 )
 
             output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -362,3 +362,7 @@ def validate_qc_setup_list(qc_setup_list: list[str]) -> None:
     for item in qc_setup_list:
         if not isinstance(item, str) or not item.strip():
             raise ValidationError("QC setup list items must be non-empty strings")
+
+
+DATETIME_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
+"""Default datetime string format used for serialization and deserialization"""
