@@ -45,7 +45,9 @@ if job_statuses:
 else:
     print("No active jobs.")
 
-DOWNLOAD_DIR = Path("C:/Data/qctss")
+
+# Set the directory to save downloaded config/wiring files
+DOWNLOAD_DIR = Path("C:/Data/qctss")  # Windows example
 
 # Download QCSetup config files (saved to specified absolute paths)
 client.download_qcsetup_config_file(paths={

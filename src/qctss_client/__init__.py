@@ -4,16 +4,11 @@ QCTSS Client SDK
 A Python SDK for interacting with the QCTSS quantum computing platform.
 """
 
-__version__ = "0.3.0"
-SDK_NAME = "qctss-client"
-__author__ = "Quantaser Photonics Co. Ltd."
-__email__ = "tina@quantaser.com"
-
 from .client import QCTSSClient
 from .exceptions import (
-    QCTSSException, 
-    ConfigError, 
-    AuthenticationError, 
+    QCTSSException,
+    ConfigError,
+    AuthenticationError,
     AuthorizationError,
     JobClientError,
     JobNotFoundError,
@@ -22,41 +17,44 @@ from .exceptions import (
     BillingClientError,
     InvalidBillingPeriodError,
     WebSocketError,
-    WebSocketConnectionError, 
+    WebSocketConnectionError,
     WebSocketAuthError,
     ValidationError,
-    TimeoutError,
+    QCTSSTimeoutError,
     QCSetupNotActiveError,
     QCSetupNotFoundError,
     QCSetupConfigNotFoundError,
 )
 from .models import JobResponse, JobStatus, BillingData, WebSocketMessage
 
+__version__ = "0.3.1"
+SDK_NAME = "qctss-client"
+
+
 __all__ = [
     "QCTSSClient",
-    "SDK_NAME",
     # Exceptions
     "QCTSSException",
-    "ConfigError", 
+    "ConfigError",
     "AuthenticationError",
     "AuthorizationError",
     "JobClientError",
     "JobNotFoundError",
-    "JobCreationError", 
+    "JobCreationError",
     "InvalidJobStateError",
     "BillingClientError",
     "InvalidBillingPeriodError",
     "WebSocketError",
     "WebSocketConnectionError",
-    "WebSocketAuthError", 
+    "WebSocketAuthError",
     "ValidationError",
-    "TimeoutError",
+    "QCTSSTimeoutError",
     "QCSetupNotActiveError",
     "QCSetupNotFoundError",
     "QCSetupConfigNotFoundError",
     # Models
     "JobResponse",
-    "JobStatus", 
+    "JobStatus",
     "BillingData",
     "WebSocketMessage",
 ]
