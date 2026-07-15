@@ -1,0 +1,24 @@
+services:
+  qctss-client-docs-sphinx:
+    build:
+      context: .
+      dockerfile: docs/Dockerfile
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      PYTHONUNBUFFERED: "1"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "======================================================================"
+        echo "### Building Sphinx documentation for QCTSS Client"
+        echo "======================================================================"
+        echo "| Python: $(python --version 2>&1)"
+        echo "| git-hash: $(git log -n1 --format=%h --abbrev=7)"
+        echo "----------------------------------------------------------------------"
+        uv pip install -e /app
+        rm -rf /app/docs/_generated /app/docs/_dist
+        sphinx-build -b html /app/docs /app/docs/_dist
+        echo "----------------------------------------------------------------------"
+        echo "| Output written to: /app/docs/_dist"

@@ -1,0 +1,4 @@
+# Documentation build output directory
+_dist
+jupyter_execute
+_jupyter_cache
