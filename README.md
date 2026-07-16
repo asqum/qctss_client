@@ -1,4 +1,4 @@
-# QCTSS Client SDK
+# QC-Test Space Client SDK
 
 A Python SDK for interacting with the QCTSS platform.
 
@@ -15,13 +15,13 @@ A Python SDK for interacting with the QCTSS platform.
 ## Installation
 
 ```bash
-pip install git+https://github.com/quantaser/qctss_client.git
+pip install git+https://github.com/asqum/qctss_client.git
 ```
 
 For development installation:
 
 ```bash
-git clone https://github.com/quantaser/qctss_client.git
+git clone https://github.com/asqum/qctss_client.git
 cd qctss_client
 pip install -e ".[dev]"
 ```
@@ -116,17 +116,20 @@ download_qcsetup_config_file(
 Download QCSetup config files and save each to the specified absolute path.
 
 **Parameters**:
+
 - `paths`: `{qcsetup_name: absolute_path}` mapping
 
 **Returns**: `None` (files are written to the paths specified in `paths`)
 
 **Raises**:
+
 - `ValueError`: Any path is not absolute
 - `QCSetupConfigNotFoundError`: QCSetup exists but has no activated config
 - `QCSetupNotFoundError`: QCSetup doesn't exist (404)
 - `AuthenticationError`: Invalid token
 
 **Example**:
+
 ```python
 from pathlib import Path
 
@@ -147,16 +150,19 @@ download_qcsetup_wiring(
 Download QCSetup wiring files and save each to the specified absolute path.
 
 **Parameters**:
+
 - `paths`: `{qcsetup_name: absolute_path}` mapping
 
 **Returns**: `None` (files are written to the paths specified in `paths`)
 
 **Raises**:
+
 - `ValueError`: Any path is not absolute
 - `QCSetupNotFoundError`: QCSetup doesn't exist (404)
 - `AuthenticationError`: Invalid token
 
 **Example**:
+
 ```python
 client.download_qcsetup_wiring(paths={
     "qc1": Path("/data/qc1_wiring.json"),
@@ -173,12 +179,14 @@ start_job(qc_setup_list: List[str], service_name: str) -> JobResponse
 Submit a new quantum computing job.
 
 **Parameters**:
+
 - `qc_setup_list`: List of QC setup identifiers (non-empty)
 - `service_name`: Service name for the job (non-empty)
 
 **Returns**: `JobResponse` with job_id and initial status
 
 **Raises**:
+
 - `ValidationError`: Invalid parameters
 - `JobClientError`: Job submission failed
 - `TimeoutError`: Request timed out
@@ -195,6 +203,7 @@ Get status of all jobs for current user.
 **Returns**: List of `JobStatus` objects with current job information
 
 **Raises**:
+
 - `AuthorizationError`: Not authorized to view jobs
 - `TimeoutError`: Request timed out
 
@@ -207,11 +216,13 @@ close_job(job_id: int) -> JobResponse
 Close a running job (marks as completed). Use this when the job has finished normally.
 
 **Parameters**:
+
 - `job_id`: Job identifier (positive integer)
 
 **Returns**: `JobResponse` with updated status
 
 **Raises**:
+
 - `ValidationError`: Invalid job_id
 - `JobNotFoundError`: Job doesn't exist
 - `InvalidJobStateError`: Job cannot be closed (already finished)
@@ -227,12 +238,14 @@ cancel_job(job_id: int, reason: Optional[str] = None) -> JobResponse
 Cancel a queued or running job. Use this to abort a job before it completes normally.
 
 **Parameters**:
+
 - `job_id`: Job identifier (positive integer)
 - `reason`: Optional reason for cancellation
 
 **Returns**: `JobResponse` with updated status (`cancelled`)
 
 **Raises**:
+
 - `ValidationError`: Invalid job_id
 - `JobNotFoundError`: Job doesn't exist
 - `InvalidJobStateError`: Job cannot be cancelled (already finished)
@@ -240,6 +253,7 @@ Cancel a queued or running job. Use this to abort a job before it completes norm
 - `TimeoutError`: Request timed out
 
 **Example**:
+
 ```python
 try:
     client.cancel_job(job_id=42, reason="Experiment aborted")
@@ -260,11 +274,13 @@ subscribe_job_updates(
 Subscribe to real-time job status updates via WebSocket.
 
 **Parameters**:
+
 - `job_id`: Job identifier to monitor
 - `callback`: Function called when status updates are received
 - `on_error`: Optional error handler function
 
 **Raises**:
+
 - `ValidationError`: Invalid job_id
 - `WebSocketConnectionError`: Failed to establish WebSocket connection
 - `WebSocketAuthError`: WebSocket authentication failed
@@ -278,6 +294,7 @@ unsubscribe_job_updates(job_id: int) -> None
 Stop receiving real-time updates for a job and disconnect its WebSocket connection.
 
 **Parameters**:
+
 - `job_id`: Job identifier to stop monitoring
 
 **Note**: `wait_until_running` automatically unsubscribes when the job reaches `running` state. You only need to call this manually if you called `subscribe_job_updates` directly and want to stop early.
@@ -295,6 +312,7 @@ wait_until_running(
 Wait for job to transition from queued to running status.
 
 This is a convenience method that automatically:
+
 1. Subscribes to WebSocket updates for the job
 2. Monitors status changes in real-time
 3. Returns when job reaches 'running' state
@@ -303,6 +321,7 @@ This is a convenience method that automatically:
 You can press Ctrl+C to cancel waiting and clean up the WebSocket connection.
 
 **Parameters**:
+
 - `job_id`: Job identifier to monitor (positive integer)
 - `timeout`: Maximum time to wait in seconds (None = wait forever)
 - `on_status`: Optional callback function for status updates during waiting
@@ -310,12 +329,14 @@ You can press Ctrl+C to cancel waiting and clean up the WebSocket connection.
 **Returns**: Port number assigned when job starts running
 
 **Raises**:
+
 - `ValidationError`: Invalid job_id
 - `TimeoutError`: Job didn't reach 'running' state within timeout
 - `WebSocketError`: WebSocket connection failed
 - `KeyboardInterrupt`: User pressed Ctrl+C to cancel waiting
 
 **Example**:
+
 ```python
 job = client.start_job(["setup1", "setup2"], "quantum_simulation")
 
@@ -340,129 +361,15 @@ close() -> None
 
 Close all connections and clean up resources.
 
-### Data Models
-
-#### JobResponse
-
-```python
-class JobResponse(BaseModel):
-    job_id: int
-    status: str
-    message: Optional[str] = None
-```
-
-#### JobStatus
-
-```python
-class JobStatus(BaseModel):
-    job_id: int
-    status: str
-    qc_setup_list: List[str]
-    service_name: str
-    queue_position: Optional[int] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-```
-
-## Error Handling
-
-The SDK provides comprehensive error handling with specific exceptions for different error conditions:
-
-### Exception Types
-
-- **`AuthenticationError`**: Authentication failed (invalid token)
-- **`AuthorizationError`**: Not authorized for operation
-- **`QCSetupNotActiveError`**: QCSetup status is not 'active' (403)
-- **`QCSetupNotFoundError`**: QCSetup doesn't exist (404)
-- **`QCSetupConfigNotFoundError`**: QCSetup exists but has no activated config
-- **`JobClientError`**: Job operation failed
-- **`JobNotFoundError`**: Job doesn't exist
-- **`InvalidJobStateError`**: Job cannot be modified (invalid state)
-- **`ValidationError`**: Invalid parameters
-- **`WebSocketError`**: WebSocket connection issues
-- **`TimeoutError`**: Request timed out
-
-### Example
-
-```python
-from pathlib import Path
-from qctss_client import (
-    QCTSSClient,
-    AuthenticationError,
-    AuthorizationError,
-    QCSetupNotFoundError,
-    QCSetupConfigNotFoundError,
-    JobClientError,
-    JobNotFoundError,
-    InvalidJobStateError,
-    ValidationError,
-    WebSocketError,
-    TimeoutError
-)
-
-try:
-    client = QCTSSClient(token="your-token")
-
-    # Download QCSetup configs
-    client.download_qcsetup_config_file(paths={
-        "qc1": Path("/data/qc1_config.json"),
-    })
-
-    # Submit job
-    job = client.start_job(["setup1"], "quantum_sim")
-
-    def handle_update(status):
-        print(f"Job {status.job_id}: {status.status}")
-
-    client.subscribe_job_updates(job.job_id, handle_update)
-
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-except QCSetupConfigNotFoundError as e:
-    print(f"QCSetup has no activated config: {e}")
-except QCSetupNotFoundError as e:
-    print(f"QCSetup not found: {e}")
-except ValidationError as e:
-    print(f"Invalid parameters: {e}")
-except JobClientError as e:
-    print(f"Job operation failed: {e}")
-except WebSocketError as e:
-    print(f"WebSocket error: {e}")
-except TimeoutError as e:
-    print(f"Request timed out: {e}")
-finally:
-    if 'client' in locals():
-        client.close()
-```
-
 ### Token Permissions
 
 `qctss-client` uses **client token** (type='client'), with the following permissions:
+
 - ✅ Download config and wiring for active QCSetups
 - ✅ Submit, monitor, and close jobs
 - ❌ Cannot upload config/wiring (requires `qctss-admin` with admin token)
 - ❌ Cannot access billing data
 
-### Exception Hierarchy
-
-```
-Exception
-└── RCCIException (base)
-    ├── ConfigError
-    ├── AuthenticationError
-    ├── AuthorizationError
-    ├── QCSetupNotActiveError
-    ├── QCSetupNotFoundError
-    ├── QCSetupConfigNotFoundError
-    ├── JobClientError
-    │   ├── JobNotFoundError
-    │   └── InvalidJobStateError
-    ├── WebSocketError
-    │   ├── WebSocketConnectionError
-    │   └── WebSocketAuthError
-    ├── ValidationError
-    └── TimeoutError
-```
 
 ## Development
 
@@ -480,5 +387,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- Email: tina@quantaser.com
-- Issues: [GitHub Issues](https://github.com/quantaser/qctss_client/issues)
+- Contact: [takehuge@as.edu.tw](mailto:takehuge@as.edu.tw)
+- Email:
+  - [tina@quantaser.com](mailto:tina@quantaser.com)
+  - [harui2019@as.edu.tw](mailto:harui2019@as.edu.tw)
+- Issues: [GitHub Issues](https://github.com/asqum/qctss_client/issues)

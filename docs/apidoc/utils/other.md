@@ -1,7 +1,7 @@
-# `utils`
+# `other`
 
 ```{eval-rst}
-.. automodule:: qctss_client.utils
+.. automodule:: qctss_client.utils.other
    :members:
    :undoc-members:
 ```

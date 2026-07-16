@@ -1,15 +1,15 @@
-# `client`
+# `utils`
 
 ```{toctree}
 :maxdepth: 1
 
-endpoint
-subscribe
-core
+http
+other
+validate
 ```
 
 ```{eval-rst}
-.. automodule:: qctss_client.client
+.. automodule:: qctss_client.utils
    :members:
    :undoc-members:
 ```
