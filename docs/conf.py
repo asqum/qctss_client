@@ -13,6 +13,7 @@
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 DOCS_DIR = Path(__file__).parent
 
@@ -83,6 +84,12 @@ html_sourcelink_suffix = ""
 
 html_extra_path = []  # You can set this if needed
 html_static_path = ["_static"] if (DOCS_DIR / "_static").exists() else []
+html_css_files = [
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css",
+]
+
 html_last_updated_fmt = "%Y-%m-%d %H:%M:%S"  # Format for the last updated time
 html_use_edit_page_button = False
 html_use_repository_button = False
@@ -91,6 +98,27 @@ html_use_multitoc_numbering = True
 html_extra_footer = ""
 html_home_page_in_navbar = True
 html_announcement = ""
+
+html_theme_options: dict[str, Any] = {
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/asqum/qctss_client",
+            "html": """
+                <i class="fa-brands fa-solid fa-github fa-2x"></i>
+            """,
+            "class": "",
+        },
+        {
+            "name": "RCCI, Academia Sinica",
+            "url": "https://rcci.sinica.edu.tw/facility.php?id=7",
+            "html": """
+                <i class="fa-solid fa-home fa-2x"></i>
+            """,
+            "class": "",
+        },
+    ]
+}
 
 language = "en"
 

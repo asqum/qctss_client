@@ -1,42 +1,20 @@
-"""Utility functions for HTTP requests and retry logic (:mod:`qctss_client.utils`)"""
+"""HTTP requests and retry logic (:mod:`qctss_client.utils.http`)"""
 
 import logging
 from typing import Any, Optional
-import warnings
 from urllib.parse import urljoin
 from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
 
-from .exceptions import (
+from .other import SDK_NAME, SDK_VERSION
+from ..exceptions import (
     QCTSSException,
     QCTSSTimeoutError,
-    InvalidPackageInfo,
     map_http_error,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _get_sdk_version() -> str:
-    """Get the SDK version for identification in requests"""
-    try:
-        from importlib.metadata import version as _pkg_version
-
-        return _pkg_version("qctss-client")
-    except (ImportError, ValueError) as e:
-        warnings.warn(
-            f"Could not retrieve SDK version. Due to {e}",
-            InvalidPackageInfo,
-        )
-        return "unknown"
-
-
-_SDK_NAME = "qctss-client"
-"""SDK name for identification in requests"""
-
-_SDK_VERSION = _get_sdk_version()
-"""SDK version for identification in requests"""
 
 
 class RetryHTTPAdapter(HTTPAdapter):
@@ -127,8 +105,8 @@ def make_request(
         "X-API-KEY": token,
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "X-SDK-Name": _SDK_NAME,
-        "X-SDK-Version": _SDK_VERSION,
+        "X-SDK-Name": SDK_NAME,
+        "X-SDK-Version": SDK_VERSION,
     }
     if headers:
         request_headers.update(headers)
@@ -328,41 +306,3 @@ def delete(
     if response.content:
         return response.json()
     return None
-
-
-def validate_job_id(job_id: int) -> None:
-    """Validate job ID parameter
-
-    Args:
-        job_id (int): Job ID to validate
-
-    Raises:
-        ValidationError: If job_id is invalid
-    """
-    from .exceptions import ValidationError
-
-    if not isinstance(job_id, int) or job_id <= 0:
-        raise ValidationError("Job ID must be a positive integer")
-
-
-def validate_qc_setup_list(qc_setup_list: list[str]) -> None:
-    """Validate QC setup list parameter
-
-    Args:
-        qc_setup_list (list[str]): QC setup list to validate
-
-    Raises:
-        ValidationError: If qc_setup_list is invalid
-    """
-    from .exceptions import ValidationError
-
-    if not isinstance(qc_setup_list, list) or len(qc_setup_list) == 0:
-        raise ValidationError("QC setup list cannot be empty")
-
-    for item in qc_setup_list:
-        if not isinstance(item, str) or not item.strip():
-            raise ValidationError("QC setup list items must be non-empty strings")
-
-
-DATETIME_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
-"""Default datetime string format used for serialization and deserialization"""

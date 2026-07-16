@@ -4,9 +4,15 @@ from typing import Optional, Callable, Any
 from pathlib import Path
 import logging
 import requests
-import warnings
 
-from .config import BackendConfig
+from .endpoint import (
+    BackendConfig,
+    save_token,
+    read_token,
+    DEFAULT_CHANNEL_NAME,
+    DEFAULT_URL_CATEGORY,
+    AvailableCategory,
+)
 from .subscribe import JobWaitingMonitor, MAX_TIMEOUT
 from ..exceptions import (
     QCTSSException,
@@ -18,7 +24,7 @@ from ..exceptions import (
 )
 from ..models import JobResponse, JobStatus
 from ..websocket_manager import WebSocketManager
-from .. import utils
+from ..utils import http, validate_job_id
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +32,58 @@ logger = logging.getLogger(__name__)
 class QCTSSClient:
     """Main client class for interacting with QCTSS backend."""
 
+    @staticmethod
+    def save_token(
+        token: str,
+        channel_name: str = DEFAULT_CHANNEL_NAME,
+        endpoint_category: AvailableCategory = DEFAULT_URL_CATEGORY,
+        replace: bool = False,
+    ):
+        """Save the token to the default config path (~/.qctss/qctss-client.json).
+
+        Args:
+            token (str): The token string to save.
+            channel_name (str): The channel name associated with the token.
+                Default is "default".
+            endpoint_category (AvailableCategory): Category of the endpoint URLs.
+                Default is the default URL category.
+            path (Path): The directory path where the token file will be saved.
+                Defaults to ~/.qctss
+            replace (bool): If True, replace the existing token for the channel.
+                If False, give a warning if the token for the channel already exists.
+                Default is False.
+        """
+        save_token(
+            token,
+            channel_name=channel_name,
+            endpoint_category=endpoint_category,
+            replace=replace,
+        )
+
+    @property
+    def token(self) -> str:
+        """Get the current token for the client.
+
+        Returns:
+            str: The current token value.
+        """
+        return self._token
+
+    @token.setter
+    def token(self, value: str):
+        """Set the token for the client.
+
+        Args:
+            value (str): The new token value.
+        """
+        if not value or not isinstance(value, str):
+            raise ValidationError("Token must be a non-empty string")
+
+        self._token = value
+
     def __init__(
         self,
-        token: str,
+        channel_name: str = DEFAULT_CHANNEL_NAME,
         backend_url: Optional[str] = None,
         fastapi_url: Optional[str] = None,
         websocket_url: Optional[str] = None,
@@ -39,7 +94,7 @@ class QCTSSClient:
         """Initialize QCTSS Client.
 
         Args:
-            token (str): Authentication token.
+            channel_name (str): Channel name to read token from config file.
             backend_url (Optional[str]): Backend server URL
             fastapi_url (Optional[str]): FastAPI server URL
             websocket_url (Optional[str]): WebSocket server URL
@@ -53,9 +108,11 @@ class QCTSSClient:
         Raises:
             ValidationError: If token is empty or None
         """
+
+        token_info = read_token(channel_name=channel_name)
+        token = token_info.get("token")
         if not token:
             raise ValidationError("Token cannot be empty")
-
         self.token = token
 
         config_args = {}
@@ -88,10 +145,10 @@ class QCTSSClient:
         Returns:
             JSON response data
         """
-        return utils.get(
+        return http.get(
             base_url=self.config.backend_url,
             endpoint=endpoint,
-            token=self.token,
+            token=self._token,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
             retry_delay=self.config.retry_delay,
@@ -108,10 +165,10 @@ class QCTSSClient:
         Returns:
             JSON response data
         """
-        return utils.get(
+        return http.get(
             base_url=self.config.fastapi_url,
             endpoint=endpoint,
-            token=self.token,
+            token=self._token,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
             retry_delay=self.config.retry_delay,
@@ -128,10 +185,10 @@ class QCTSSClient:
         Returns:
             JSON response data
         """
-        return utils.post(
+        return http.post(
             base_url=self.config.backend_url,
             endpoint=endpoint,
-            token=self.token,
+            token=self._token,
             data=data,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
@@ -148,10 +205,10 @@ class QCTSSClient:
         Returns:
             JSON response data
         """
-        return utils.put(
+        return http.put(
             base_url=self.config.backend_url,
             endpoint=endpoint,
-            token=self.token,
+            token=self._token,
             data=data,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
@@ -167,10 +224,10 @@ class QCTSSClient:
         Returns:
             JSON response data or None if no content
         """
-        return utils.delete(
+        return http.delete(
             base_url=self.config.backend_url,
             endpoint=endpoint,
-            token=self.token,
+            token=self._token,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
             retry_delay=self.config.retry_delay,
@@ -183,10 +240,10 @@ class QCTSSClient:
         Returns:
             List of job status data dictionaries
         """
-        return utils.get(
+        return http.get(
             base_url=self.config.fastapi_url,
             endpoint="/fastapi/job/status",
-            token=self.token,
+            token=self._token,
             timeout=self.config.timeout,
             max_retries=self.config.max_retries,
             retry_delay=self.config.retry_delay,
@@ -387,7 +444,7 @@ class QCTSSClient:
             self._websocket_manager.connect(
                 job_id=job_id,
                 websocket_url=self.config.websocket_url,
-                token=self.token,
+                token=self._token,
                 callback=callback,
                 handle_error=handle_error,
             )
@@ -462,7 +519,7 @@ class QCTSSClient:
         """
 
         # Validate job_id
-        utils.validate_job_id(job_id)
+        validate_job_id(job_id)
 
         waiting_monitor = JobWaitingMonitor(
             job_id=job_id,
@@ -547,7 +604,7 @@ class QCTSSClient:
                 f"{self.config.backend_url}/api/"
                 + f"qc-setups/by-name/{name}/download-config/"
             )
-            headers = {"X-API-KEY": self.token}  # 使用 client token
+            headers = {"X-API-KEY": self._token}  # 使用 client token
 
             try:
                 response = requests.get(
@@ -599,8 +656,11 @@ class QCTSSClient:
         for name, output_path in paths.items():
             output_path = Path(output_path)
 
-            url = f"{self.config.backend_url}/api/qc-setups/by-name/{name}/download-wiring/"
-            headers = {"X-API-KEY": self.token}
+            url = (
+                f"{self.config.backend_url}/api/"
+                + f"qc-setups/by-name/{name}/download-wiring/"
+            )
+            headers = {"X-API-KEY": self._token}
 
             try:
                 response = requests.get(

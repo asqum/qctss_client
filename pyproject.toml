@@ -9,9 +9,11 @@ description = "QCTSS Client SDK for quantum computing resource control"
 license = { text = "MIT" }
 authors = [
     { name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com" },
+    { name = "Huai-Chun Chang", email = "harui2019@as.edu.tw" },
 ]
 maintainers = [
     { name = "Quantaser Photonics Co. Ltd", email = "tina@quantaser.com" },
+    { name = "Huai-Chun Chang", email = "harui2019@as.edu.tw" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

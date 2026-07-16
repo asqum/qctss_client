@@ -1,4 +1,34 @@
-"""Exception hierarchy for QCTSS Client SDK (:mod:`qctss_client.exceptions`)"""
+"""Exception hierarchy for QCTSS Client SDK (:mod:`qctss_client.exceptions`)
+
+- Exception Hierarchy
+
+.. code-block:: text
+
+    Exception
+    └── QCTSSException (base)
+        ├── ConfigError
+        ├── AuthenticationError
+        │   ├── TokenExistingWarning (also inherits from Warning)
+        │   └── TokenNotFoundError (also inherits from FileNotFoundError)
+        ├── AuthorizationError
+        ├── JobClientError
+        │   ├── JobNotFoundError
+        │   ├── JobCreationError
+        │   ├── InvalidJobStateError
+        │   └── JobFailedError
+        ├── BillingClientError
+        │   └── InvalidBillingPeriodError
+        ├── WebSocketError
+        │   ├── WebSocketConnectionError
+        │   └── WebSocketAuthError
+        ├── ValidationError
+        ├── QCSetupNotActiveError
+        ├── QCSetupNotFoundError
+        ├── QCSetupConfigNotFoundError
+        ├── QCTSSTimeoutError (also inherits from TimeoutError)
+        └── InvalidPackageInfo (also inherits from Warning)
+
+"""
 
 from typing import Optional, Any
 
@@ -45,6 +75,14 @@ class ConfigError(QCTSSException):
 
 class AuthenticationError(QCTSSException):
     """Authentication failed (invalid token, expired, etc.)"""
+
+
+class TokenExistingWarning(QCTSSException, Warning):
+    """Warning when an existing token is found in the config file"""
+
+
+class TokenNotFoundError(QCTSSException, FileNotFoundError):
+    """Token not found in the config file"""
 
 
 class AuthorizationError(QCTSSException):

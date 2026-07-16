@@ -1,7 +1,8 @@
-qctss\_client.cli module
-========================
+# `cli`
 
+```{eval-rst}
 .. automodule:: qctss_client.cli
    :members:
    :show-inheritance:
    :undoc-members:
+```
