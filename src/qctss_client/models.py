@@ -1,6 +1,4 @@
-"""
-Pydantic data models for RCCI Client SDK
-"""
+"""Pydantic data models for QCTSS Client SDK. (`mod:`qctss_client.models`)"""
 
 from datetime import datetime
 from typing import Optional, Any, Union
@@ -43,7 +41,7 @@ class JobResponse(BaseModel):
     message: str = Field(description="Response message")
 
     # Support both legacy and new format
-    job_id: Optional[int] = Field(default=None, description="Job ID")
+    job_id: int = Field(default=-1, description="Job ID")
     status: Optional[str] = Field(default=None, description="Job status")
 
     # New API format support - optional nested structure
@@ -72,7 +70,7 @@ class JobResponse(BaseModel):
         """Extract job_id and status from nested job dict if not present at top level"""
         # pylint: disable=no-member
         if self.job_id is None and isinstance(self.job, dict):
-            self.job_id = self.job.get("job_id")
+            self.job_id = self.job.get("job_id", -1)
         if self.status is None and isinstance(self.job, dict):
             self.status = self.job.get("status")
         # pylint: enable=no-member

@@ -1,9 +1,13 @@
-"""Configuration management for QCTSS Client (:mod:`qctss_client.config`)"""
+"""QCTSS Client endpoint management (:mod:`qctss_client.client.endpoint`)"""
 
-from typing import Literal, Any, Optional
+from typing import Literal, Any
 from urllib.parse import urlparse
 from dataclasses import dataclass
+from pathlib import Path
 import logging
+import json
+
+from ..exceptions import TokenExistingWarning, TokenNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -155,3 +159,102 @@ class BackendConfig:
 
 DEFAULT_CONFIG = BackendConfig()
 """Default configuration instance for QCTSS Client. """
+
+DEFAULT_QCTSS_CONFIG_PATH = Path.home() / ".qctss"
+"""Default path for QCTSS configuration files (~/.qctss)"""
+
+DEFAULT_TOKEN_FILE_NAME = "qctss-client.json"
+"""Default token file name for QCTSS Client (qctss-client.json)"""
+
+DEFAULT_CHANNEL_NAME = "default"
+"""Default channel name for QCTSS Client token storage (default)"""
+
+
+def read_token(
+    channel_name: str = DEFAULT_CHANNEL_NAME, path: Path = DEFAULT_QCTSS_CONFIG_PATH
+) -> dict[str, str]:
+    """Read the token from a file in the specified path.
+
+    Args:
+        channel_name (str): The channel name associated with the token.
+            Default is "default".
+        path (Path): The directory path where the token file is located.
+            Defaults to ~/.qctss
+
+    Returns:
+        dict[str, str]: A dictionary containing the token and endpoint category.
+
+    Raises:
+        TokenNotFoundError: If the token file or the token for the specified channel is not found.
+    """
+
+    token_file_path = path / DEFAULT_TOKEN_FILE_NAME
+    if not token_file_path.exists():
+        raise TokenNotFoundError(
+            f"Token file not found at {token_file_path}. "
+            "Please ensure the token is saved using save_token()."
+        )
+    with open(token_file_path, "r") as f:
+        config_data = json.load(f)
+
+    if channel_name not in config_data:
+        raise TokenNotFoundError(
+            f"Token for channel '{channel_name}' not found in {token_file_path}. "
+            "Please ensure the token is saved using save_token()."
+        )
+
+    required_keys = {"token", "endpoint_category"}
+    if not required_keys.issubset(config_data[channel_name].keys()):
+        raise TokenNotFoundError(
+            f"Token for channel '{channel_name}' is missing required keys in {token_file_path}. "
+            "Please ensure the token is saved using save_token()."
+        )
+    return config_data.get(channel_name, {})
+
+
+def save_token(
+    token: str,
+    channel_name: str = DEFAULT_CHANNEL_NAME,
+    endpoint_category: AvailableCategory = DEFAULT_URL_CATEGORY,
+    path: Path = DEFAULT_QCTSS_CONFIG_PATH,
+    replace: bool = False,
+) -> None:
+    """Save the token to a file in the specified path.
+
+    Args:
+        token (str): The token string to save.
+        channel_name (str): The channel name associated with the token.
+            Default is "default".
+        endpoint_category (AvailableCategory): Category of the endpoint URLs.
+            Default is the default URL category.
+        path (Path): The directory path where the token file will be saved.
+            Defaults to ~/.qctss
+        replace (bool): If True, replace the existing token for the channel.
+            If False, give a warning if the token for the channel already exists.
+            Default is False.
+    """
+
+    path.mkdir(parents=True, exist_ok=True)
+    token_file_path = path / DEFAULT_TOKEN_FILE_NAME
+    with open(token_file_path, "w+") as f:
+        config_data = (
+            json.load(f)
+            if token_file_path.exists() and token_file_path.stat().st_size > 0
+            else {}
+        )
+        if channel_name in config_data and not replace:
+            logger.warning(
+                f"Token for channel '{channel_name}' already exists. "
+                "Use 'replace=True' to overwrite it."
+            )
+            raise TokenExistingWarning(
+                f"Token for channel '{channel_name}' already exists. "
+                "Use 'replace=True' to overwrite it."
+            )
+        config_data[channel_name] = {
+            "token": token,
+            "endpoint_category": endpoint_category,
+        }
+        f.seek(0)
+        json.dump(config_data, f, indent=2)
+    logger.info(f"Token saved to {token_file_path}")
