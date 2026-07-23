@@ -38,6 +38,9 @@ FASTAPI_URLS: UrlDict = {"internal": "http://10.21.19.201:80/"}
 WEBSOCKET_URLS: UrlDict = {"internal": "ws://10.21.19.201:80/"}
 """The all available WebSocket URL for the QC-Test Space. """
 
+DEFAULT_CHANNEL_NAME = "default"
+"""Default channel name for QCTSS Client token storage (default)"""
+
 
 @dataclass(frozen=True)
 class BackendConfig:
@@ -47,6 +50,7 @@ class BackendConfig:
     No environment files are required as the backend URL is embedded during build.
 
     Args:
+        channel_name (str): Channel name for token storage and retrieval
         backend_url (str): Backend server URL
         fastapi_url (str): FastAPI server URL
         websocket_url (str): WebSocket server URL
@@ -55,6 +59,7 @@ class BackendConfig:
         retry_delay (int): Delay between retries in seconds. Default is 5 seconds.
     """
 
+    channel_name: str = DEFAULT_CHANNEL_NAME
     backend_url: str = BACKEND_URLS[DEFAULT_URL_CATEGORY]
     fastapi_url: str = FASTAPI_URLS[DEFAULT_URL_CATEGORY]
     websocket_url: str = WEBSOCKET_URLS[DEFAULT_URL_CATEGORY]
@@ -143,6 +148,8 @@ class BackendConfig:
 
         p.begin_group(2, f"{self.__class__.__name__}(")
         p.breakable()
+        p.text(f"channel_name={self.channel_name},")
+        p.breakable()
         p.text(f"backend_url={self.backend_url},")
         p.breakable()
         p.text(f"fastapi_url={self.fastapi_url},")
@@ -165,9 +172,6 @@ DEFAULT_QCTSS_CONFIG_PATH = Path.home() / ".qctss"
 
 DEFAULT_TOKEN_FILE_NAME = "qctss-client.json"
 """Default token file name for QCTSS Client (qctss-client.json)"""
-
-DEFAULT_CHANNEL_NAME = "default"
-"""Default channel name for QCTSS Client token storage (default)"""
 
 
 def read_token(
@@ -236,25 +240,49 @@ def save_token(
 
     path.mkdir(parents=True, exist_ok=True)
     token_file_path = path / DEFAULT_TOKEN_FILE_NAME
-    with open(token_file_path, "w+") as f:
-        config_data = (
-            json.load(f)
-            if token_file_path.exists() and token_file_path.stat().st_size > 0
-            else {}
+    if token_file_path.exists():
+        with open(token_file_path, "r") as f:
+            try:
+                config_data = json.load(f)
+            except json.JSONDecodeError:
+                config_data = {}
+    else:
+        config_data = {}
+
+    if channel_name in config_data and not replace:
+        logger.warning(
+            f"Token for channel '{channel_name}' already exists. "
+            "Use 'replace=True' to overwrite it."
         )
-        if channel_name in config_data and not replace:
-            logger.warning(
-                f"Token for channel '{channel_name}' already exists. "
-                "Use 'replace=True' to overwrite it."
-            )
-            raise TokenExistingWarning(
-                f"Token for channel '{channel_name}' already exists. "
-                "Use 'replace=True' to overwrite it."
-            )
+        raise TokenExistingWarning(
+            f"Token for channel '{channel_name}' already exists. "
+            "Use 'replace=True' to overwrite it."
+        )
+
+    with open(token_file_path, "w") as f:
         config_data[channel_name] = {
             "token": token,
             "endpoint_category": endpoint_category,
         }
-        f.seek(0)
         json.dump(config_data, f, indent=2)
     logger.info(f"Token saved to {token_file_path}")
+
+
+def list_available_channels(
+    path: Path = DEFAULT_QCTSS_CONFIG_PATH,
+) -> list[str]:
+    """List all available channels in the token file.
+
+    Args:
+        path (Path): The directory path where the token file is saved.
+            Defaults to ~/.qctss
+
+    Returns:
+        list[str]: A list of available channel names.
+    """
+    token_file_path = path / DEFAULT_TOKEN_FILE_NAME
+    if not token_file_path.exists() or token_file_path.stat().st_size == 0:
+        return []
+    with open(token_file_path, "r") as f:
+        config_data = json.load(f)
+    return list(config_data.keys())
