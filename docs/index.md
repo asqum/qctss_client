@@ -44,7 +44,7 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## Support
 
 - Contact: [takehuge@as.edu.tw](mailto:takehuge@as.edu.tw)
-- Email:
+- Maintainers:
   - [tina@quantaser.com](mailto:tina@quantaser.com)
   - [harui2019@as.edu.tw](mailto:harui2019@as.edu.tw)
 - Issues: [GitHub Issues](https://github.com/asqum/qctss_client/issues)
@@ -55,7 +55,8 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 :maxdepth: 1
 :caption: Tutorials
 
-First Time <basic_usage/first_time>
+Quick Start <basic_usage/quick_start>
+Setup Token <basic_usage/setup_token/index>
 Error Handling <basic_usage/error_handle>
 
 ```

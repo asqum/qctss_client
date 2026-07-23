@@ -9,6 +9,7 @@ from .endpoint import (
     BackendConfig,
     save_token,
     read_token,
+    list_available_channels,
     DEFAULT_CHANNEL_NAME,
     DEFAULT_URL_CATEGORY,
     AvailableCategory,
@@ -21,6 +22,8 @@ from ..exceptions import (
     QCSetupNotActiveError,
     QCSetupNotFoundError,
     JobFailedError,
+    JobCreationError,
+    InvalidJobStateError,
 )
 from ..models import JobResponse, JobStatus
 from ..websocket_manager import WebSocketManager
@@ -81,6 +84,15 @@ class QCTSSClient:
 
         self._token = value
 
+    @staticmethod
+    def list_channels() -> list[str]:
+        """List all available channels with saved tokens.
+
+        Returns:
+            list[str]: List of channel names.
+        """
+        return list_available_channels()
+
     def __init__(
         self,
         channel_name: str = DEFAULT_CHANNEL_NAME,
@@ -115,7 +127,7 @@ class QCTSSClient:
             raise ValidationError("Token cannot be empty")
         self.token = token
 
-        config_args = {}
+        config_args: dict[str, Any] = {"channel_name": channel_name}
         if backend_url:
             config_args["backend_url"] = backend_url
         if fastapi_url:
@@ -291,8 +303,6 @@ class QCTSSClient:
                     details=e.details,
                 ) from e
             elif e.http_status and 400 <= e.http_status < 500:
-                from ..exceptions import JobCreationError
-
                 raise JobCreationError(
                     f"Job creation failed: {e.backend_message}",
                     http_status=e.http_status,
@@ -352,7 +362,6 @@ class QCTSSClient:
         except QCTSSException as e:
             # Re-map specific errors for job closing context
             if e.http_status == 409:  # Conflict - invalid state
-                from ..exceptions import InvalidJobStateError
 
                 raise InvalidJobStateError(
                     f"Cannot close job {job_id}: {e.backend_message}",
@@ -401,7 +410,6 @@ class QCTSSClient:
         except QCTSSException as e:
             # Re-map specific errors for job cancellation context
             if e.http_status == 409:  # Conflict - invalid state
-                from ..exceptions import InvalidJobStateError
 
                 raise InvalidJobStateError(
                     f"Cannot cancel job {job_id}: {e.backend_message}",

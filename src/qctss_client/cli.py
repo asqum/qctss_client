@@ -51,7 +51,7 @@ def _handle_start_job(args: QCTSSClientCLINameSpace, client: QCTSSClient) -> Non
         client (QCTSSClient): Initialized QCTSSClient instance.
     """
 
-    job = client.start_job(qc_setup_list=args.qc_setups, service_name=args.service)
+    job = client.create_and_start_job(qc_setup_list=args.qc_setups, service_name=args.service)
     _print_json(
         {
             "job_id": job.job_id,
