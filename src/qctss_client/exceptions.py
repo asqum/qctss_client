@@ -74,15 +74,16 @@ class ConfigError(QCTSSException):
     """Configuration-related errors"""
 
 
+# Authentication and authorization exceptions
 class AuthenticationError(QCTSSException):
     """Authentication failed (invalid token, expired, etc.)"""
 
 
-class TokenExistingWarning(QCTSSException, Warning):
+class TokenExistingWarning(AuthenticationError, Warning):
     """Warning when an existing token is found in the config file"""
 
 
-class TokenNotFoundError(QCTSSException, FileNotFoundError):
+class TokenNotFoundError(AuthenticationError, FileNotFoundError):
     """Token not found in the config file"""
 
 
@@ -137,8 +138,10 @@ class WebSocketAuthError(WebSocketError):
 class ValidationError(QCTSSException, ValueError):
     """Input validation errors"""
 
+
 class QCSetupException(QCTSSException):
     """Base exception for QCSetup-related errors"""
+
 
 class QCSetupNotActiveError(QCSetupException):
     """The specified QCSetup exists but is not currently active (no activated config)"""
