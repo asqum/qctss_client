@@ -21,10 +21,11 @@
         ├── WebSocketError
         │   ├── WebSocketConnectionError
         │   └── WebSocketAuthError
-        ├── ValidationError
-        ├── QCSetupNotActiveError
-        ├── QCSetupNotFoundError
-        ├── QCSetupConfigNotFoundError
+        ├── ValidationError (also inherits from ValueError)
+        ├── QCSetupException (base for QCSetup-related errors)
+        │   ├── QCSetupNotActiveError
+        │   ├── QCSetupNotFoundError
+        │   └── QCSetupConfigNotFoundError
         ├── QCTSSTimeoutError (also inherits from TimeoutError)
         └── InvalidPackageInfo (also inherits from Warning)
 
@@ -52,7 +53,7 @@ class QCTSSException(Exception):
         self.details = details or {}
 
     def __repr__(self) -> str:
-        parts = [self.message]
+        parts = [f"Message: {self.message}"]
 
         if self.http_status:
             parts.append(f"HTTP {self.http_status}")
@@ -136,16 +137,18 @@ class WebSocketAuthError(WebSocketError):
 class ValidationError(QCTSSException, ValueError):
     """Input validation errors"""
 
+class QCSetupException(QCTSSException):
+    """Base exception for QCSetup-related errors"""
 
-class QCSetupNotActiveError(QCTSSException):
+class QCSetupNotActiveError(QCSetupException):
     """The specified QCSetup exists but is not currently active (no activated config)"""
 
 
-class QCSetupNotFoundError(QCTSSException):
+class QCSetupNotFoundError(QCSetupException):
     """The specified QCSetup does not exist"""
 
 
-class QCSetupConfigNotFoundError(QCTSSException):
+class QCSetupConfigNotFoundError(QCSetupException):
     """The specified QCSetup exists but has no activated config"""
 
 
