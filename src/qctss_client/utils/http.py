@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
 
-from .other import SDK_NAME, SDK_VERSION
+from .__init__ import SDK_NAME, SDK_VERSION
 from ..exceptions import (
     QCTSSException,
     QCTSSTimeoutError,
