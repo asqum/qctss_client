@@ -362,7 +362,6 @@ class QCTSSClient:
         except QCTSSException as e:
             # Re-map specific errors for job closing context
             if e.http_status == 409:  # Conflict - invalid state
-
                 raise InvalidJobStateError(
                     f"Cannot close job {job_id}: {e.backend_message}",
                     http_status=e.http_status,
@@ -410,7 +409,6 @@ class QCTSSClient:
         except QCTSSException as e:
             # Re-map specific errors for job cancellation context
             if e.http_status == 409:  # Conflict - invalid state
-
                 raise InvalidJobStateError(
                     f"Cannot cancel job {job_id}: {e.backend_message}",
                     http_status=e.http_status,
@@ -482,7 +480,7 @@ class QCTSSClient:
         timeout: int = MAX_TIMEOUT,
         on_status: Optional[Callable[[JobStatus], None]] = None,
         except_job_failed: bool = False,
-    ) -> Optional[JobStatus]:
+    ) -> JobStatus:
         """Wait for job to transition from queued to running status.
 
         This method automatically:
@@ -505,8 +503,7 @@ class QCTSSClient:
                 Default is False.
 
         Returns:
-            JobStatus object when job reaches 'running' state, or None if
-            the job is already in a terminal state (completed, failed, cancelled).
+            JobStatus object when job reaches 'running' state.
 
         Raises:
             TimeoutError: If job doesn't reach 'running' state within timeout
@@ -561,17 +558,24 @@ class QCTSSClient:
                     waiting_monitor.exception_holder, JobFailedError
                 ):
                     # Return None if job failed and except_job_failed is True
-                    return None
+                    return JobStatus(
+                        job_id=job_id,
+                        status="failed",
+                        error_message=str(waiting_monitor.exception_holder),
+                    )
                 # Re-raise the exception (could be JobFailedError or other)
                 raise waiting_monitor.exception_holder
 
             raise RuntimeError(
-                f"Unexpected state while waiting for job {job_id}: {waiting_monitor.final_status}"
+                "Unexpected state while waiting for "
+                + f"job {job_id}: {waiting_monitor.final_status}"
             )
 
         except KeyboardInterrupt:
             # User pressed Ctrl+C - clean up and re-raise
-            print("\n\nWaiting cancelled by user (Ctrl+C)")
+            print()
+            print("-" * 50)
+            print("Waiting cancelled by user (Ctrl+C)")
             logger.info(f"User cancelled waiting for job {job_id} (Ctrl+C)")
             raise KeyboardInterrupt(f"Waiting for job {job_id} cancelled by user")
         finally:

@@ -55,9 +55,10 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 :maxdepth: 1
 :caption: Tutorials
 
-Quick Start <basic_usage/quick_start>
-Setup Token <basic_usage/setup_token/index>
-Error Handling <basic_usage/error_handle>
+Quick Start <basic_usage/quick_start/index>
+Check Job Status <basic_usage/check_job>
+Make Reservation <basic_usage/make_reservation/index>
+Handle Error and Error Response <basic_usage/error_handle>
 
 ```
 

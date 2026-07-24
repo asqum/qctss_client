@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
 
-from .other import SDK_NAME, SDK_VERSION
+from .__init__ import SDK_NAME, SDK_VERSION
 from ..exceptions import (
     QCTSSException,
     QCTSSTimeoutError,
@@ -141,6 +141,7 @@ def make_request(
         logger.error("Request timeout: %s", url)
         raise QCTSSTimeoutError(
             f"Request timed out after {timeout}s",
+            error_code="TIMEOUT_ERROR",
             details={"url": url, "timeout": timeout},
         ) from e
 

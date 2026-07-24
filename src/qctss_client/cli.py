@@ -5,11 +5,11 @@ import json
 import sys
 from typing import Any, Literal
 
+from .__init__ import __version__
 from .client import QCTSSClient
 from .client.subscribe import CLIJobMonitor
 from .exceptions import QCTSSException
 from .utils import DATETIME_STR_FORMAT
-from .__init__ import __version__
 
 
 class QCTSSClientCLINameSpace(argparse.Namespace):
@@ -51,7 +51,7 @@ def _handle_start_job(args: QCTSSClientCLINameSpace, client: QCTSSClient) -> Non
         client (QCTSSClient): Initialized QCTSSClient instance.
     """
 
-    job = client.create_and_start_job(qc_setup_list=args.qc_setups, service_name=args.service)
+    job = client.start_job(qc_setup_list=args.qc_setups, service_name=args.service)
     _print_json(
         {
             "job_id": job.job_id,

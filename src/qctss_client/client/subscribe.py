@@ -140,7 +140,9 @@ class JobWaitingMonitor:
         self.final_status = status
         # Check if job has started running
         if status.status == "running":
-            print(f"[Job {self.job_id}] NOW RUNNING!")
+            msg = f"[Job {self.job_id}] NOW RUNNING!"
+            logger.info(msg)
+            print(msg)
             self.job_running_event.set()  # Signal that job is running
 
             # Schedule WebSocket disconnect asynchronously to avoid blocking
@@ -149,7 +151,9 @@ class JobWaitingMonitor:
             threading.Thread(target=self._defer_disconnect, daemon=True).start()
 
         elif status.status in TERMINAL_STATES:
-            print(f"[Job {self.job_id}] ENDED with status '{status.status}'")
+            msg = f"[Job {self.job_id}] ENDED with status '{status.status}'"
+            logger.error(msg)
+            print(msg)
             self.exception_holder = JobFailedError(
                 f"Job {self.job_id} ended with status '{status.status}'"
             )
@@ -161,6 +165,8 @@ class JobWaitingMonitor:
         Args:
             error (Exception): The exception raised during WebSocket communication
         """
-        print(f"\n[Job {self.job_id}] WebSocket error: {error}")
+        msg = f"[Job {self.job_id}] WebSocket error: {error}"
+        logger.error(msg)
+        print(msg)
         self.exception_holder = error
         self.job_running_event.set()  # Signal to exit waiting immediately
