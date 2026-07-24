@@ -141,6 +141,7 @@ def make_request(
         logger.error("Request timeout: %s", url)
         raise QCTSSTimeoutError(
             f"Request timed out after {timeout}s",
+            error_code="TIMEOUT_ERROR",
             details={"url": url, "timeout": timeout},
         ) from e
 

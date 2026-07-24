@@ -573,7 +573,9 @@ class QCTSSClient:
 
         except KeyboardInterrupt:
             # User pressed Ctrl+C - clean up and re-raise
-            print("\n\nWaiting cancelled by user (Ctrl+C)")
+            print()
+            print("-" * 50)
+            print("Waiting cancelled by user (Ctrl+C)")
             logger.info(f"User cancelled waiting for job {job_id} (Ctrl+C)")
             raise KeyboardInterrupt(f"Waiting for job {job_id} cancelled by user")
         finally:
