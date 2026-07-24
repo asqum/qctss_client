@@ -4,7 +4,6 @@
 :maxdepth: 1
 
 http
-other
 validate
 ```
 
