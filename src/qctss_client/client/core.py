@@ -265,16 +265,17 @@ class QCTSSClient:
         """Start a new event job without reservation.
 
         Args:
-            qc_setup_list (list[str]): List of QC setup names
-            service_name (str): Name of the service to use
+            qc_setup_list (list[str]): List of QC setup names.
+            service_name (str): Name of the service to use.
 
         Returns:
-            JobResponse with job_id and status
+            JobResponse with job_id and status,
 
         Raises:
-            ValidationError: Invalid parameters
-            JobCreationError: Job creation failed
-            TimeoutError: Request timed out
+            ValidationError: Invalid parameters.
+            JobCreationError: Job creation failed.
+            TimeoutError: Request timed out.
+            AuthenticationError: Invalid or expired token.
         """
         # Validate parameters
         if not qc_setup_list or not all(qc_setup_list):
@@ -318,11 +319,12 @@ class QCTSSClient:
         FastAPI Server job query functionality.
 
         Returns:
-            list of JobStatus objects
+            a list of :class:`~qctss_client.models.JobStatus` 
+            objects with current job information.
 
         Raises:
-            AuthorizationError: Not authorized to access jobs
-            TimeoutError: Request timed out
+            AuthorizationError: Not authorized to access jobs.
+            TimeoutError: Request timed out.
         """
 
         response_data = self._call_fastapi_job_query()
@@ -332,16 +334,18 @@ class QCTSSClient:
         """Close a job (mark as completed).
 
         Args:
-            job_id (int): Job ID to close
+            job_id (int): Job ID to close.
 
         Returns:
-            JobResponse with updated status (completed)
+            :class:`~qctss_client.models.JobResponse`
+            with updated status (completed).
 
         Raises:
-            JobNotFoundError: Job not found
-            InvalidJobStateError: Job cannot be closed in current state
-            TimeoutError: Request timed out
-            ValidationError: Invalid job_id
+            JobNotFoundError: Job not found.
+            InvalidJobStateError: Job cannot be closed in current state.
+            TimeoutError: Request timed out.
+            AuthorizationError: Not authorized to close job.
+            ValidationError: Invalid job_id.
         """
         # Validate job_id
         if not isinstance(job_id, int) or job_id <= 0:
@@ -374,20 +378,29 @@ class QCTSSClient:
                 raise
 
     def cancel_job(self, job_id: int, reason: Optional[str] = None) -> JobResponse:
-        """Cancel a job.
+        """Cancel a queued or running job.
+        Use this to abort a job before it completes normally.
 
         Args:
             job_id (int): Job ID to cancel
             reason (Optional[str], optional): Optional reason for cancellation
 
         Returns:
-            JobResponse with updated status (cancelled)
+            :class:`~qctss_client.models.JobResponse` with updated status (cancelled).
+            
+        Example:
+            >>> try:
+            ...     job = client.start_job(qc_setup_list, service_name)
+            ...     # ... do some work ...
+            ... except InvalidJobStateError:
+            ...     print("Job already finished, cannot cancel")
 
         Raises:
-            JobNotFoundError: Job not found
-            InvalidJobStateError: Job cannot be cancelled in current state
-            TimeoutError: Request timed out
-            ValidationError: Invalid job_id
+            JobNotFoundError: Job not found.
+            InvalidJobStateError: Job cannot be cancelled in current state.
+            AuthorizationError: Not authorized to cancel job.
+            TimeoutError: Request timed out.
+            ValidationError: Invalid job_id.
         """
         # Validate job_id
         if not isinstance(job_id, int) or job_id <= 0:
@@ -428,16 +441,17 @@ class QCTSSClient:
         """Subscribe to real-time job status updates via WebSocket.
 
         Args:
-            job_id (int): Job ID to monitor
+            job_id (int): Job ID to monitor.
             callback (Optional[Callable[[JobStatus], None]], optional):
-                Optional function called with JobStatus updates
+                Optional function called with JobStatus updates.
             handle_error (Optional[Callable[[Exception], None]], optional):
-                Optional function called on WebSocket errors
+                Optional function called on WebSocket errors.
 
         Raises:
-            WebSocketError: Connection failed
-            JobNotFoundError: Job not found
-            ValidationError: Invalid job_id
+            ValidationError: Invalid job_id.
+            WebSocketConnectionError: Failed to establish WebSocket connection.
+            WebSocketAuthError: WebSocket authentication failed.
+            JobNotFoundError: Job not found.
         """
         # Validate job_id
         if not isinstance(job_id, int) or job_id <= 0:
@@ -464,7 +478,13 @@ class QCTSSClient:
             raise
 
     def unsubscribe_job_updates(self, job_id: int) -> None:
-        """Unsubscribe from job updates.
+        """Stop receiving real-time updates for a job and disconnect
+        its WebSocket connection.
+
+        :func:`wait_until_running` automatically unsubscribes
+        when the job reaches `running` state.
+        You only need to call this manually if you called
+        :func:`subscribe_job_updates` directly and want to stop early.
 
         Args:
             job_id (int): Job ID to stop monitoring
@@ -492,10 +512,10 @@ class QCTSSClient:
         You can press Ctrl+C to cancel waiting and disconnect.
 
         Args:
-            job_id (int): Job ID to monitor
+            job_id (int): Job ID to monitor.
             timeout (int):
                 Maximum time to wait in seconds.
-                Default is :const:`qctss_client.client.subscribe.MAX_TIMEOUT`
+                Default is :const:`~qctss_client.client.subscribe.MAX_TIMEOUT`
             on_status (Optional[Callable[[JobStatus], None]]):
                 Optional callback for status updates during waiting
             except_job_failed (bool):
@@ -506,10 +526,10 @@ class QCTSSClient:
             JobStatus object when job reaches 'running' state.
 
         Raises:
-            TimeoutError: If job doesn't reach 'running' state within timeout
-            ValidationError: Invalid job_id
-            WebSocketError: Connection failed
-            KeyboardInterrupt: User pressed Ctrl+C
+            TimeoutError: If job doesn't reach 'running' state within timeout.
+            ValidationError: Invalid job_id.
+            WebSocketError: Connection failed.
+            KeyboardInterrupt: User pressed Ctrl+C.
 
         Example:
             >>> job = client.start_job(qc_setup_list, service_name)
@@ -519,8 +539,10 @@ class QCTSSClient:
             ...     # Continue with next steps
             ... except TimeoutError:
             ...     print("Job took too long to start")
+            ...     client.close_job(job.job_id)
             ... except KeyboardInterrupt:
             ...     print("Waiting cancelled by user (Ctrl+C)")
+            ...     client.close_job(job.job_id)
         """
 
         # Validate job_id
