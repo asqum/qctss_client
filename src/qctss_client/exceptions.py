@@ -32,6 +32,7 @@
 """
 
 from typing import Optional, Any, Literal
+from enum import Enum
 import json
 
 ErrorCodeType = Literal[
@@ -48,14 +49,39 @@ ErrorCodeType = Literal[
 ]
 
 
+class ErrorCode(Enum):
+    """Enumeration of error codes for QCTSS Client exceptions."""
+
+    TIMEOUT_ERROR = "TIMEOUT_ERROR"
+    """Indicates that an operation timed out."""
+    CONNECTION_ERROR = "CONNECTION_ERROR"
+    """Indicates a connection-related error (e.g., network issues)."""
+    REQUEST_ERROR = "REQUEST_ERROR"
+    """Indicates an error related to the request (e.g., malformed request)."""
+    CLIENT_ERROR = "CLIENT_ERROR"
+    """Indicates a client-side error (HTTP 4xx)."""
+    SERVER_ERROR = "SERVER_ERROR"
+    """Indicates a server-side error (HTTP 5xx)."""
+    UNAUTHORIZED = "UNAUTHORIZED"
+    """Indicates that authentication failed (HTTP 401)."""
+    FORBIDDEN = "FORBIDDEN"
+    """Indicates that the user does not have permission (HTTP 403)."""
+    NOT_FOUND = "NOT_FOUND"
+    """Indicates that the requested resource was not found (HTTP 404)."""
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+    """Indicates that input validation failed (HTTP 422)."""
+    HTTP_ERROR = "HTTP_ERROR"
+    """Indicates a generic HTTP error not covered by other codes."""
+
+
 class QCTSSException(Exception):
-    """Base exception for all QCTSS Client errors. """
+    """Base exception for all QCTSS Client errors."""
 
     message: str
     """Error message describing the exception."""
     http_status: Optional[int]
     """HTTP status code associated with the error (if applicable)."""
-    error_code: Optional[ErrorCodeType]
+    error_code: Optional[ErrorCode]
     """Specific error code for categorizing the exception."""
     backend_message: Optional[str]
     """Message returned from the backend (if applicable)."""
@@ -67,14 +93,14 @@ class QCTSSException(Exception):
         self,
         message: str,
         http_status: Optional[int] = None,
-        error_code: Optional[ErrorCodeType] = None,
+        error_code: Optional[ErrorCode] = None,
         backend_message: Optional[str] = None,
         details: Optional[dict[str, Any]] = None,
     ):
         super().__init__(message)
         self.message = message
         self.http_status = http_status
-        self.error_code: Optional[ErrorCodeType] = error_code
+        self.error_code: Optional[ErrorCode] = error_code
         self.backend_message = backend_message
         self.details = details if details is not None else {}
 
@@ -227,7 +253,7 @@ def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
         return JobClientError(
             f"Client error: {status_code}",
             http_status=status_code,
-            error_code="CLIENT_ERROR",
+            error_code=ErrorCode.CLIENT_ERROR,
             backend_message=backend_message,
             details=error_details,
         )
@@ -236,7 +262,7 @@ def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
         return QCTSSException(
             f"Server error: {status_code}",
             http_status=status_code,
-            error_code="SERVER_ERROR",
+            error_code=ErrorCode.SERVER_ERROR,
             backend_message=backend_message,
             details=error_details,
         )
@@ -244,7 +270,7 @@ def map_http_error(status_code: int, response_text: str = "") -> QCTSSException:
     return QCTSSException(
         f"HTTP error: {status_code}",
         http_status=status_code,
-        error_code="HTTP_ERROR",
+        error_code=ErrorCode.HTTP_ERROR,
         backend_message=backend_message,
         details=error_details,
     )

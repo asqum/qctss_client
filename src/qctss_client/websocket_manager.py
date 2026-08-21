@@ -10,7 +10,12 @@ from typing import Optional, Callable
 from urllib.parse import urlparse, parse_qs, urlencode
 import websocket
 
-from .exceptions import WebSocketError, WebSocketConnectionError, WebSocketAuthError
+from .exceptions import (
+    WebSocketError,
+    WebSocketConnectionError,
+    WebSocketAuthError,
+    ErrorCode,
+)
 from .models import WebSocketMessage, JobStatus
 
 logger = logging.getLogger(__name__)
@@ -192,7 +197,7 @@ class WebSocketManager:
         if message.type == "error":
             error = WebSocketError(
                 message.message or "WebSocket error",
-                error_code=message.code,
+                error_code=ErrorCode(message.code),
                 details={"job_id": job_id},
             )
 
@@ -200,7 +205,7 @@ class WebSocketManager:
             if message.code in ["unauthorized", "invalid_token", "auth_timeout"]:
                 error = WebSocketAuthError(
                     message.message or "Authentication failed",
-                    error_code=message.code,
+                    error_code=ErrorCode(message.code),
                     details={"job_id": job_id},
                 )
 
