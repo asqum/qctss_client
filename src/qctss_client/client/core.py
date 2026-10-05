@@ -1,9 +1,7 @@
 """QCTSS Client Core. (:mod:`qctss_client.client.core`)"""
 
 from typing import Optional, Callable, Any
-from pathlib import Path
 import logging
-import requests
 
 from .endpoint import (
     BackendConfig,
@@ -18,9 +16,6 @@ from .subscribe import JobWaitingMonitor, MAX_TIMEOUT
 from ..exceptions import (
     QCTSSException,
     ValidationError,
-    QCSetupConfigNotFoundError,
-    QCSetupNotActiveError,
-    QCSetupNotFoundError,
     JobFailedError,
     JobCreationError,
     InvalidJobStateError,
@@ -319,7 +314,7 @@ class QCTSSClient:
         FastAPI Server job query functionality.
 
         Returns:
-            a list of :class:`~qctss_client.models.JobStatus` 
+            a list of :class:`~qctss_client.models.JobStatus`
             objects with current job information.
 
         Raises:
@@ -387,13 +382,6 @@ class QCTSSClient:
 
         Returns:
             :class:`~qctss_client.models.JobResponse` with updated status (cancelled).
-            
-        Example:
-            >>> try:
-            ...     job = client.start_job(qc_setup_list, service_name)
-            ...     # ... do some work ...
-            ... except InvalidJobStateError:
-            ...     print("Job already finished, cannot cancel")
 
         Raises:
             JobNotFoundError: Job not found.
@@ -401,6 +389,13 @@ class QCTSSClient:
             AuthorizationError: Not authorized to cancel job.
             TimeoutError: Request timed out.
             ValidationError: Invalid job_id.
+
+        Example:
+            >>> try:
+            ...     job = client.start_job(qc_setup_list, service_name)
+            ...     # ... do some work ...
+            ... except InvalidJobStateError:
+            ...     print("Job already finished, cannot cancel")
         """
         # Validate job_id
         if not isinstance(job_id, int) or job_id <= 0:
@@ -610,108 +605,3 @@ class QCTSSClient:
         self._websocket_manager.disconnect_all()
         self._websocket_connections.clear()
         logger.info("QC-Test Space Client closed")
-
-    def download_qcsetup_config_file(
-        self,
-        paths: dict[str, Path],
-    ) -> None:
-        """
-        批次下載多個 QCSetup 的 config 檔案並儲存至指定絕對路徑。
-
-        Args:
-            paths: {qcsetup_name: 絕對路徑} 對映表
-
-        Raises:
-            ValueError: 路徑非絕對路徑
-            QCSetupNotActiveError: QCSetup 狀態非 active
-            QCSetupConfigNotFoundError: QCSetup 無 activated config
-            QCSetupNotFoundError: QCSetup 不存在
-        """
-        for name, output_path in paths.items():
-            if not Path(output_path).is_absolute():
-                raise ValueError(f"Path for '{name}' must be absolute: {output_path}")
-
-        for name, output_path in paths.items():
-            output_path = Path(output_path)
-
-            url = (
-                f"{self.config.backend_url}/api/"
-                + f"qc-setups/by-name/{name}/download-config/"
-            )
-            headers = {"X-API-KEY": self._token}  # 使用 client token
-
-            try:
-                response = requests.get(
-                    url, headers=headers, timeout=self.config.timeout
-                )
-            except requests.RequestException as e:
-                raise Exception(f"Failed to connect to backend: {e}")
-
-            if response.status_code == 403:
-                raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
-            elif response.status_code == 404:
-                try:
-                    error_body = response.json()
-                except Exception:
-                    error_body = {}
-                if error_body.get("error") == "No activated config found":
-                    raise QCSetupConfigNotFoundError(
-                        f"QCSetup '{name}' has no activated config"
-                    )
-                raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
-            elif response.status_code != 200:
-                raise Exception(
-                    "Failed to download config for "
-                    + f"'{name}': {response.status_code} {response.text}"
-                )
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(response.text, encoding="utf-8")
-
-    def download_qcsetup_wiring(
-        self,
-        paths: dict[str, Path],
-    ) -> None:
-        """
-        批次下載多個 QCSetup 的 wiring 檔案並儲存至指定絕對路徑。
-
-        Args:
-            paths: {qcsetup_name: 絕對路徑} 對映表
-
-        Raises:
-            ValueError: 路徑非絕對路徑
-            QCSetupNotActiveError: QCSetup 狀態非 active
-            QCSetupNotFoundError: QCSetup 不存在
-        """
-        for name, output_path in paths.items():
-            if not Path(output_path).is_absolute():
-                raise ValueError(f"Path for '{name}' must be absolute: {output_path}")
-
-        for name, output_path in paths.items():
-            output_path = Path(output_path)
-
-            url = (
-                f"{self.config.backend_url}/api/"
-                + f"qc-setups/by-name/{name}/download-wiring/"
-            )
-            headers = {"X-API-KEY": self._token}
-
-            try:
-                response = requests.get(
-                    url, headers=headers, timeout=self.config.timeout
-                )
-            except requests.RequestException as e:
-                raise QCTSSException(f"Failed to connect to backend: {e}")
-
-            if response.status_code == 403:
-                raise QCSetupNotActiveError(f"QCSetup '{name}' is not active")
-            elif response.status_code == 404:
-                raise QCSetupNotFoundError(f"QCSetup '{name}' not found")
-            elif response.status_code != 200:
-                raise QCTSSException(
-                    "Failed to download wiring for "
-                    + "'{name}': {response.status_code} {response.text}"
-                )
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(response.text, encoding="utf-8")
