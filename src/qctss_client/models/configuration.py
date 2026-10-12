@@ -28,12 +28,15 @@ ConfigurationCategory = Literal[
     "quantum-machine", "qblox", "quantaser", "keysight", "not-specified"
 ]
 """Configuration category literal type
-    Possible values are:
-    - "quantum-machine"
-    - "qblox"
-    - "quantaser"
-    - "keysight"
-    - "not-specified"
+
+Possible values are:
+
+- `quantum-machine <https://www.quantum-machines.co/>`_ 
+- `qblox <https://qblox.com/>`_
+- `quantaser <https://www.quantaser.com>`_
+- `keysight <https://www.keysight.com>`_
+- `not-specified`
+
 """
 
 
@@ -67,32 +70,46 @@ class ConfigurationBase(BaseModel, Generic[C]):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description="Configuration ID")
+    """The configuration ID on QC-Test Space."""
     name: str = Field(description="Configuration name")
+    """The configuration name on QC-Test Space."""
     description: Optional[str] = Field(description="Configuration description")
+    """The configuration description on QC-Test Space."""
 
     author_id: int = Field(description="User identifier", alias="user_id")
-    """Convert from backend variable name 'user_id'"""
+    """The author user identifier on QC-Test Space.
+    Convert from backend variable name 'user_id'."""
     author_name: str = Field(description="Author name")
+    """The author name on QC-Test Space."""
     qcsetup_id: int = Field(description="QC setup identifier", alias="qcsetup")
-    """Convert from backend variable name 'qcsetup'"""
+    """The QC setup identifier on QC-Test Space.
+    Convert from backend variable name 'qcsetup'."""
     qcsetup_name: str = Field(description="QC setup name")
+    """The QC setup name on QC-Test Space."""
     qpu_id: int = Field(description="QPU identifier", alias="qpu")
-    """Convert from backend variable name 'qpu'"""
+    """The QPU identifier on QC-Test Space.
+    Convert from backend variable name 'qpu'."""
     qpu_name: str = Field(description="QPU name", alias="qpu_chip_id")
-    """Convert from backend variable name 'qpu_chip_id'"""
+    """The QPU chip identifier on QC-Test Space.
+    Convert from backend variable name 'qpu_chip_id'"""
     machine_id: int = Field(description="Machine identifier", alias="machine")
-    """Convert from backend variable name 'machine'"""
+    """The machine identifier on QC-Test Space.
+    Convert from backend variable name 'machine'."""
     machine_name: str = Field(description="Machine name")
+    """The machine name on QC-Test Space."""
 
     created_at: Optional[datetime] = Field(
         default=None, description="Configuration creation timestamp"
     )
+    """The configuration creation timestamp on QC-Test Space."""
     updated_at: Optional[datetime] = Field(
         default=None, description="Configuration last update timestamp"
     )
+    """The configuration last update timestamp on QC-Test Space."""
 
     configuration: Optional[C] = Field(description="Configuration details")
-    """Convert from backend variable name 'configuration'"""
+    """The configuration details on QC-Test Space.
+    Convert from backend variable name 'configuration'."""
 
     @abstractmethod
     def save(self, save_dir: Path | str) -> Path:
@@ -139,7 +156,7 @@ class ConfigurationBase(BaseModel, Generic[C]):
         return f"{self.__class__.__name__}({field_str})"
 
     def save_other_info(
-        self, save_dir: Path | str, name_of_other_info: str = "config_info.json"
+        self, save_dir: Path | str, name_of_other_info: str = "_config_info.json"
     ) -> Path:
         """Save additional configuration information to a JSON file.
 
@@ -148,7 +165,7 @@ class ConfigurationBase(BaseModel, Generic[C]):
                 The directory where the additional information JSON file will be saved.
             name_of_other_info (str, optional):
                 The filename for the additional information JSON file.
-                Defaults to "config_info.json".
+                Defaults to `"_config_info.json"`.
 
         Returns:
             The directory where the additional information JSON file was saved.
@@ -157,10 +174,14 @@ class ConfigurationBase(BaseModel, Generic[C]):
         if isinstance(save_dir, str):
             save_dir = Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
-        other_info_path = save_dir / name_of_other_info
-        with other_info_path.open("w") as f:
+
+        with (save_dir / name_of_other_info).open("w") as f:
             json.dump(
-                self.model_dump(exclude={"configuration"}, exclude_none=True),
+                self.model_dump(
+                    mode="json",
+                    exclude={"configuration", "author_id", "machine_id"},
+                    exclude_none=True,
+                ),
                 f,
                 indent=4,
             )
@@ -168,7 +189,12 @@ class ConfigurationBase(BaseModel, Generic[C]):
 
 
 class QuantumMachineConfiguration(ConfigurationBase[QuantumMachine]):
+    """The configuration for a Quantum Machine device."""
+
     category: Literal["quantum-machine"]
+    """The category of the configuration, 
+    which is `"quantum-machine" <https://www.quantum-machines.co/>`_  
+    for Quantum Machine devices."""
 
     def get_state(self) -> dict:
         """Retrieve the state configuration as a dictionary."""
@@ -183,7 +209,7 @@ class QuantumMachineConfiguration(ConfigurationBase[QuantumMachine]):
         save_dir: Path | str,
         name_of_state: str = "state.json",
         name_of_wiring: str = "wiring.json",
-        name_of_other_info: str = "config_info.json",
+        name_of_other_info: str = "_config_info.json",
     ) -> Path:
         """Save the state, wiring for the Quantum Machine devices,
         and additional configuration information to the specified directory.
@@ -192,12 +218,12 @@ class QuantumMachineConfiguration(ConfigurationBase[QuantumMachine]):
             save_dir (Path | str):
                 The directory where the state and wiring JSON files will be saved.
             name_of_state (str, optional):
-                The filename for the state JSON file. Defaults to "state.json".
+                The filename for the state JSON file. Defaults to `"state.json"`.
             name_of_wiring (str, optional):
-                The filename for the wiring JSON file. Defaults to "wiring.json".
+                The filename for the wiring JSON file. Defaults to `"wiring.json"`.
             name_of_other_info (str, optional):
                 The filename for the additional configuration information JSON file.
-                Defaults to "config_info.json".
+                Defaults to `"_config_info.json"`.
 
         Returns:
             The directory where the state, wiring for Quantum Machine devices,
@@ -219,7 +245,12 @@ class QuantumMachineConfiguration(ConfigurationBase[QuantumMachine]):
 
 
 class QbloxConfiguration(ConfigurationBase[Qblox]):
+    """The configuration for a Qblox device."""
+
     category: Literal["qblox"]
+    """The category of the configuration, 
+    which is `"qblox" <https://www.qblox.com/>`_  
+    for Qblox devices."""
 
     def get_state(self) -> dict:
         """Retrieve the state configuration as a dictionary."""
@@ -234,7 +265,7 @@ class QbloxConfiguration(ConfigurationBase[Qblox]):
         save_dir: Path | str,
         name_of_state: str = "state.json",
         name_of_hardware: str = "hw.json",
-        name_of_other_info: str = "config_info.json",
+        name_of_other_info: str = "_config_info.json",
     ) -> Path:
         """Save the state, hardware for the Qblox device,
         and additional configuration information to the specified directory.
@@ -243,12 +274,12 @@ class QbloxConfiguration(ConfigurationBase[Qblox]):
             save_dir (Path | str):
                 The directory where the state and hardware JSON files will be saved.
             name_of_state (str, optional):
-                The filename for the state JSON file. Defaults to "state.json".
+                The filename for the state JSON file. Defaults to `"state.json"`.
             name_of_hardware (str, optional):
-                The filename for the hardware JSON file. Defaults to "hw.json".
+                The filename for the hardware JSON file. Defaults to `"hw.json"`.
             name_of_other_info (str, optional):
                 The filename for the additional configuration information JSON file.
-                Defaults to "config_info.json".
+                Defaults to `"_config_info.json"`.
 
         Returns:
             The directory where the state, hardware for the Qblox device,
@@ -270,7 +301,10 @@ class QbloxConfiguration(ConfigurationBase[Qblox]):
 
 
 class GeneralConfiguration(ConfigurationBase[General]):
+    """The configuration for general settings."""
+
     category: Literal["quantaser", "keysight", "not-specified"]
+    """The category of the configuration for other general settings."""
 
     def get_config(self) -> dict:
         """Retrieve the general configuration as a dictionary."""
@@ -280,7 +314,7 @@ class GeneralConfiguration(ConfigurationBase[General]):
         self,
         save_dir: Path | str,
         name_of_config: str = "config.json",
-        name_of_other_info: str = "config_info.json",
+        name_of_other_info: str = "_config_info.json",
     ) -> Path:
         """Save the general configuration and
         additional configuration information to the specified directory.
@@ -290,10 +324,10 @@ class GeneralConfiguration(ConfigurationBase[General]):
                 The directory where the general configuration JSON file will be saved.
             name_of_config (str, optional):
                 The filename for the general configuration JSON file.
-                Defaults to "config.json".
+                Defaults to `"config.json"`.
             name_of_other_info (str, optional):
                 The filename for the additional configuration information JSON file.
-                Defaults to "config_info.json".
+                Defaults to `"_config_info.json"`.
 
         Returns:
             The directory where the general configuration and
@@ -317,7 +351,7 @@ Configuration = Annotated[
     Union[QuantumMachineConfiguration, QbloxConfiguration, GeneralConfiguration],
     Field(discriminator="category"),
 ]
-"""Equivalent of the TS `Configuration` union"""
+"""The type representing the union of all possible configuration categories."""
 
 ConfigurationAdapter: TypeAdapter[Configuration] = TypeAdapter(Configuration)
 """Type adapter for the Configuration union.

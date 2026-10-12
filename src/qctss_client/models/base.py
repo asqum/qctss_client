@@ -9,6 +9,7 @@ class BaseModel(PydanticBaseModel):
     """Local base model with friendlier notebook rendering."""
 
     model_config = ConfigDict(from_attributes=True)
+    """Pydantic model configuration."""
 
     def _repr_pretty_(self, p: Any, cycle: bool) -> None:
         """Render a compact multiline representation in IPython/Jupyter."""
