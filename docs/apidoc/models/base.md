@@ -1,7 +1,7 @@
-# `models`
+# `base`
 
 ```{eval-rst}
-.. automodule:: qctss_client.models
+.. automodule:: qctss_client.models.base
    :members:
    :undoc-members:
 ```
