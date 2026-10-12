@@ -20,7 +20,7 @@ from ..exceptions import (
     JobCreationError,
     InvalidJobStateError,
 )
-from ..models import JobResponse, JobStatus
+from ..models import JobResponse, JobStatus, PublicConfigResponse, ConfigurationsResult
 from ..websocket_manager import WebSocketManager
 from ..utils import http, validate_job_id
 
@@ -563,7 +563,8 @@ class QCTSSClient:
                 # Timeout occurred
                 self.unsubscribe_job_updates(job_id)
                 raise TimeoutError(
-                    f"Job {job_id} did not reach 'running' state within {timeout} seconds"
+                    f"Job {job_id} did not reach "
+                    + f"'running' state within {timeout} seconds"
                 )
 
             if isinstance(waiting_monitor.final_status, JobStatus):
@@ -605,3 +606,37 @@ class QCTSSClient:
         self._websocket_manager.disconnect_all()
         self._websocket_connections.clear()
         logger.info("QC-Test Space Client closed")
+
+    def get_config_by_qcsetup(self, qcsetup_id: int) -> ConfigurationsResult:
+        """Retrieve the configuration for a given QC setup ID.
+
+        Args:
+            qcsetup_id (int):
+                The ID of the QC setup for which to retrieve the configuration.
+
+        Returns:
+            The result containing the configurations for the specified QC setup.
+
+        """
+        response: PublicConfigResponse = self._get(
+            "/api/public-config/by-qcsetup",
+            params={"qcsetup_id": qcsetup_id},
+        )
+        return ConfigurationsResult.from_response(response)
+
+    def get_config_by_qpu(self, qpu_id: int) -> ConfigurationsResult:
+        """Retrieve the configuration for a given QPU ID.
+
+        Args:
+            qpu_id (int):
+                The ID of the QPU for which to retrieve the configuration.
+
+        Returns:
+            The result containing the configurations for the specified QPU.
+
+        """
+        response: PublicConfigResponse = self._get(
+            "/api/public-config/by-qpu",
+            params={"qpu_id": qpu_id},
+        )
+        return ConfigurationsResult.from_response(response)
