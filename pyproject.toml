@@ -51,7 +51,7 @@ docs = [
     # basic requirements
     "ipykernel",
     "jupyter",
-
+    "sphinx-pydantic",
 ]
 
 [project.urls]

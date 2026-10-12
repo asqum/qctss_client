@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinxext.opengraph",
     "myst_nb",  # required for JupyterBook-style notebooks
+    "sphinx-pydantic",
 ]
 
 # -- Intersphinx mapping ---------------------------------------------------
@@ -126,3 +127,23 @@ language = "en"
 
 # pygments_style = "sphinx"
 # pygments_dark_style = "lightbulb"
+
+
+# -- Autodoc hooks -----------------------------------------------------------
+
+
+def _skip_pydantic_generic_aliases(app, what, name, obj, skip, options):
+    """Skip parametrized Pydantic generics like ``ConfigurationBase[Qblox]``.
+
+    Pydantic registers these in the defining module's globals, so
+    ``automodule :members:`` would document the generic base class again
+    for every parametrization and trigger duplicate object warnings.
+    """
+    if "[" in name:
+        return True
+    return None
+
+
+def setup(app):
+    """Register Sphinx event handlers."""
+    app.connect("autodoc-skip-member", _skip_pydantic_generic_aliases)

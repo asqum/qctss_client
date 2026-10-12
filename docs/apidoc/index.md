@@ -6,7 +6,7 @@
 :maxdepth: 1
 
 exceptions
-models
+models/index
 utils/index
 websocket_manager
 cli
