@@ -25,7 +25,8 @@
         ├── QCSetupException (base for QCSetup-related errors)
         │   ├── QCSetupNotActiveError
         │   ├── QCSetupNotFoundError
-        │   └── QCSetupConfigNotFoundError
+        │   ├── QCSetupConfigNotFoundError
+        │   └── QCSetupConfigNothingToSaveWarning (also inherits from Warning)
         ├── QCTSSTimeoutError (also inherits from TimeoutError)
         └── InvalidPackageInfo (also inherits from Warning)
 
@@ -201,6 +202,10 @@ class QCSetupNotFoundError(QCSetupException):
 
 class QCSetupConfigNotFoundError(QCSetupException):
     """The specified QCSetup exists but has no activated config"""
+
+
+class QCSetupConfigNothingToSaveWarning(QCSetupException, Warning):
+    """The specified QCSetup configuration has nothing to save"""
 
 
 class QCTSSTimeoutError(QCTSSException, TimeoutError):

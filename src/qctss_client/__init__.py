@@ -5,7 +5,14 @@ A Python SDK for interacting with the QCTSS quantum computing platform.
 """
 
 from .client import QCTSSClient
-from .models import JobResponse, JobStatus, BillingData, WebSocketMessage
+from .models import (
+    JobResponse,
+    JobStatus,
+    BillingData,
+    WebSocketMessage,
+    Configuration,
+    ConfigurationAdapter,
+)
 
 __version__ = "0.4.0.dev3"
 SDK_NAME = "qctss-client"
