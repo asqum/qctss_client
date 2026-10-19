@@ -14,5 +14,5 @@ from .models import (
     ConfigurationAdapter,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 SDK_NAME = "qctss-client"
