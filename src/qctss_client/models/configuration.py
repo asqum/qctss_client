@@ -18,6 +18,7 @@ from abc import abstractmethod
 import warnings
 import json
 import html
+from urllib.parse import ParseResult, urlparse, parse_qsl
 from pydantic import ConfigDict, Field, TypeAdapter
 
 
@@ -399,15 +400,64 @@ class PublicConfigResponse(TypedDict):
     qpu_name: str
 
 
-class ConfigurationsResult(BaseModel):
-    count: int = 0
+DEFAULT_PAGE_SIZE = 20
+"""Default page size for paginated configuration results."""
 
-    next: str | None = Field(
-        description="URL to the next page of configurations, if any"
+
+def handle_url_parse(url: str | None) -> ParseResult | None:
+    """Parse a URL and ensure it contains the required query parameters.
+    Ensures that the URL contains the required query parameters "page" and "page_size".
+
+    Example:
+        >>> handle_url_parse("https://example.com/api/config?page=1&page_size=20")
+        ParseResult(
+            scheme='https',
+            netloc='example.com',
+            path='/api/config',
+            params='',
+            query='page=1&page_size=20',
+            fragment='')
+
+    Args:
+        url (str | None): The URL to parse.
+
+    Returns:
+        ParseResult | None: The parsed URL if valid, otherwise None.
+
+    Raises:
+        ValueError: If the URL is missing required query parameters.
+    """
+    if url is None:
+        return None
+
+    parsed_url = urlparse(url)
+    query_params = dict(parse_qsl(parsed_url.query))
+    missing_params = {"page_size"} - set(query_params.keys())
+    if missing_params:
+        raise ValueError(
+            f"Missing query parameters: {missing_params}. URL provided: {url}"
+        )
+
+    return parsed_url
+
+
+class ConfigurationsResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    count: int = Field(description="Total number of configurations available")
+    page: int = Field(
+        description="Current page number of the configurations result",
     )
-    previous: str | None = Field(
-        description="URL to the previous page of configurations, if any"
+    page_size: int = Field(
+        description="Number of configurations per page", default=DEFAULT_PAGE_SIZE
     )
+    next_url_parse: ParseResult | None = Field(
+        description="URL to the next page of configurations, if any",
+    )
+    prev_url_parse: ParseResult | None = Field(
+        description="URL to the previous page of configurations, if any",
+    )
+
     qpu_id: int | None = Field(
         description="ID of the QPU associated with the configurations"
     )
@@ -420,7 +470,6 @@ class ConfigurationsResult(BaseModel):
     qcsetup_name: str | None = Field(
         description="Name of the QC setup associated with the configurations"
     )
-
     configurations: list[Configuration] = Field(description="List of configurations")
 
     def __getitem__(self, item: int):
@@ -433,15 +482,35 @@ class ConfigurationsResult(BaseModel):
         return iter(self.configurations)
 
     @classmethod
-    def from_response(cls, response: PublicConfigResponse) -> "ConfigurationsResult":
+    def from_response(
+        cls, response: PublicConfigResponse, page_size: int | None = None
+    ) -> "ConfigurationsResult":
         """Create a ConfigurationsResult instance from a response dictionary.
         Args:
             response (PublicConfigResponse):
                 The response dictionary containing configuration data.
+            page_size (int | None):
+                The number of configurations per page. Defaults to None.
 
         Returns:
             An instance of ConfigurationsResult populated with the response data.
         """
+
+        next_url_parse = handle_url_parse(response.get("next", None))
+        prev_url_parse = handle_url_parse(response.get("previous", None))
+        next_query_params = (
+            dict(parse_qsl(next_url_parse.query)) if next_url_parse else {}
+        )
+        prev_query_params = (
+            dict(parse_qsl(prev_url_parse.query)) if prev_url_parse else {}
+        )
+
+        if prev_url_parse is None:
+            page = 1
+            page_size = int(next_query_params.get("page_size", DEFAULT_PAGE_SIZE))
+        else:
+            page = int(prev_query_params.get("page", 1)) + 1
+            page_size = int(prev_query_params.get("page_size", DEFAULT_PAGE_SIZE))
 
         return cls(
             configurations=[
@@ -449,13 +518,25 @@ class ConfigurationsResult(BaseModel):
                 for config in response.get("results", [])
             ],
             count=response.get("count", 0),
-            next=response.get("next", None),
-            previous=response.get("previous", None),
+            next_url_parse=next_url_parse,
+            prev_url_parse=prev_url_parse,
             qpu_id=response.get("qpu_id", None),
             qpu_name=response.get("qpu_name", None),
             qcsetup_id=response.get("qcsetup_id", None),
             qcsetup_name=response.get("qcsetup_name", None),
+            page=page,
+            page_size=page_size,
         )
+
+    @property
+    def next_url(self) -> str | None:
+        """Return the next URL if available, otherwise None."""
+        return self.next_url_parse.geturl() if self.next_url_parse else None
+
+    @property
+    def prev_url(self) -> str | None:
+        """Return the previous URL if available, otherwise None."""
+        return self.prev_url_parse.geturl() if self.prev_url_parse else None
 
     def _repr_html_(self) -> str:
         """Render the configurations as an HTML table in Jupyter."""
@@ -486,25 +567,46 @@ class ConfigurationsResult(BaseModel):
 
         scope = []
         if self.qcsetup_name is not None or self.qcsetup_id is not None:
-            scope.append(
-                f"QC setup: {esc(self.qcsetup_name)} (id={esc(self.qcsetup_id)})"
-            )
-        if self.qpu_name is not None or self.qpu_id is not None:
-            scope.append(f"QPU: {esc(self.qpu_name)} (id={esc(self.qpu_id)})")
+            scope_of_id = f"qcsetup_id={esc(self.qcsetup_id)}"
+            scope_of_func = "get_config_by_qpu"
+            scope.append(f"QC setup: {esc(self.qcsetup_name)} ({scope_of_id})")
+        elif self.qpu_name is not None or self.qpu_id is not None:
+            scope_of_id = f"qpu_id={esc(self.qpu_id)}"
+            scope_of_func = "get_config_by_qpu"
+            scope.append(f"QPU: {esc(self.qpu_name)} ({scope_of_id})")
+        else:
+            scope_of_id = ""
+            scope_of_func = ""
+            scope.append("<em>No specific scope</em>")
+
         pages = []
-        if self.previous:
-            pages.append("previous page available")
-        if self.next:
-            pages.append("next page available")
+        if self.prev_url_parse:
+            prev_page_num = self.page - 1
+            pages.append(
+                f"Use <code>{scope_of_func}({scope_of_id}, "
+                + (f"page={prev_page_num}, " if prev_page_num > 1 else "")
+                + f"page_size={self.page_size})</code> to access the previous page"
+            )
+        if self.next_url_parse:
+            next_page_num = self.page + 1
+            pages.append(
+                f"Use <code>{scope_of_func}({scope_of_id}, page={next_page_num}, "
+                + f"page_size={self.page_size})</code> to access the next page"
+            )
 
         caption = (
             f"<strong>ConfigurationsResult</strong>: "
-            f"showing {len(self.configurations)} of {self.count} configurations"
+            f"showing {(self.page - 1) * self.page_size + 1} to "
+            f"{min(self.page * self.page_size, self.count)} of "
+            f"{self.count} configurations"
+            f" (page {self.page} of {((self.count - 1) // self.page_size) + 1})"
+            if self.page is not None and self.page_size is not None
+            else ""
         )
         if scope:
             caption += " &middot; " + " &middot; ".join(scope)
-        if pages:
-            caption += " &middot; " + ", ".join(pages)
+        for page in pages:
+            caption += "<br />" + page
 
         header = "".join(f"<th>{label}</th>" for _, label in columns)
         rows = "".join(

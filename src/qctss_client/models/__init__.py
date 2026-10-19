@@ -9,4 +9,5 @@ from .configuration import (
     ConfigurationAdapter,
     PublicConfigResponse,
     ConfigurationsResult,
+    DEFAULT_PAGE_SIZE,
 )

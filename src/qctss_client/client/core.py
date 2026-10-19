@@ -20,7 +20,13 @@ from ..exceptions import (
     JobCreationError,
     InvalidJobStateError,
 )
-from ..models import JobResponse, JobStatus, PublicConfigResponse, ConfigurationsResult
+from ..models import (
+    JobResponse,
+    JobStatus,
+    PublicConfigResponse,
+    ConfigurationsResult,
+    DEFAULT_PAGE_SIZE,
+)
 from ..websocket_manager import WebSocketManager
 from ..utils import http, validate_job_id
 
@@ -607,12 +613,18 @@ class QCTSSClient:
         self._websocket_connections.clear()
         logger.info("QC-Test Space Client closed")
 
-    def get_config_by_qcsetup(self, qcsetup_id: int) -> ConfigurationsResult:
+    def get_config_by_qcsetup(
+        self, qcsetup_id: int, page: int | None = 1, page_size: int = DEFAULT_PAGE_SIZE
+    ) -> ConfigurationsResult:
         """Retrieve the configuration for a given QC setup ID.
 
         Args:
             qcsetup_id (int):
                 The ID of the QC setup for which to retrieve the configuration.
+            page (int | None):
+                The page number of the configurations result.
+            page_size (int):
+                The number of configurations per page.
 
         Returns:
             The result containing the configurations for the specified QC setup.
@@ -620,16 +632,22 @@ class QCTSSClient:
         """
         response: PublicConfigResponse = self._get(
             "/api/public-config/by-qcsetup",
-            params={"qcsetup_id": qcsetup_id},
+            params={"qcsetup_id": qcsetup_id, "page": page, "page_size": page_size},
         )
-        return ConfigurationsResult.from_response(response)
+        return ConfigurationsResult.from_response(response, page_size=page_size)
 
-    def get_config_by_qpu(self, qpu_id: int) -> ConfigurationsResult:
+    def get_config_by_qpu(
+        self, qpu_id: int, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    ) -> ConfigurationsResult:
         """Retrieve the configuration for a given QPU ID.
 
         Args:
             qpu_id (int):
                 The ID of the QPU for which to retrieve the configuration.
+            page (int | None):
+                The page number of the configurations result.
+            page_size (int):
+                The number of configurations per page.
 
         Returns:
             The result containing the configurations for the specified QPU.
@@ -637,6 +655,6 @@ class QCTSSClient:
         """
         response: PublicConfigResponse = self._get(
             "/api/public-config/by-qpu",
-            params={"qpu_id": qpu_id},
+            params={"qpu_id": qpu_id, "page": page, "page_size": page_size},
         )
-        return ConfigurationsResult.from_response(response)
+        return ConfigurationsResult.from_response(response, page_size=page_size)
