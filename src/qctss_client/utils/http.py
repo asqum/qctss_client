@@ -11,6 +11,7 @@ from .__init__ import SDK_NAME, SDK_VERSION
 from ..exceptions import (
     QCTSSException,
     QCTSSTimeoutError,
+    ErrorCode,
     map_http_error,
 )
 
@@ -141,7 +142,7 @@ def make_request(
         logger.error("Request timeout: %s", url)
         raise QCTSSTimeoutError(
             f"Request timed out after {timeout}s",
-            error_code="TIMEOUT_ERROR",
+            error_code=ErrorCode.TIMEOUT_ERROR,
             details={"url": url, "timeout": timeout},
         ) from e
 
@@ -149,7 +150,7 @@ def make_request(
         logger.error("Connection error: %s", url)
         raise QCTSSException(
             f"Connection failed to {url}",
-            error_code="CONNECTION_ERROR",
+            error_code=ErrorCode.CONNECTION_ERROR,
             details={"url": url},
         ) from e
 
@@ -157,7 +158,7 @@ def make_request(
         logger.error("Request error: %s - %s", url, str(e))
         raise QCTSSException(
             f"Request failed: {str(e)}",
-            error_code="REQUEST_ERROR",
+            error_code=ErrorCode.REQUEST_ERROR,
             details={"url": url},
         ) from e
 
