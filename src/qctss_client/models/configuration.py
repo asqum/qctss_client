@@ -41,6 +41,24 @@ Possible values are:
 """
 
 
+def esc(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        value = value.strftime("%Y-%m-%d %H:%M:%S")
+    return html.escape(str(value))
+
+
+def table(cells: dict[str, Any]) -> str:
+    head = "".join(f"<th>{k}</th>" for k in cells)
+    body = "".join(f"<td>{esc(v)}</td>" for v in cells.values())
+    return (
+        '<table style="border-collapse: collapse; text-align: center; '
+        'margin-top: 10px;">'
+        f"<thead><tr>{head}</tr></thead><tbody><tr>{body}</tr></tbody></table>"
+    )
+
+
 class QuantumMachine(BaseModel):
     """Quantum machine configuration details"""
 
@@ -155,6 +173,51 @@ class ConfigurationBase(BaseModel, Generic[C]):
         if "configuration" not in fields:
             field_str += ", configuration={...}"
         return f"{self.__class__.__name__}({field_str})"
+
+    def _repr_html_(self) -> str:
+        """Return an HTML representation of the configuration object
+        for IPython/Jupyter."""
+
+        files = ", ".join(
+            f"<code>{k}.json</code>"
+            for k in (self.configuration.model_fields_set if self.configuration else ())
+        )
+        files_note = (
+            f"Include following configuration files: <br/>{files}"
+            "<br/> which can be exported by classmethod"
+            '<code>.save("/path/to/save/directory")</code>.'
+            if files
+            else "No configuration files available."
+        )
+        description = esc(self.description).strip()
+
+        return (
+            f"<div><p><strong>{self.__class__.__name__}</strong> id={self.id}, "
+            f"qcsetup_id={self.qcsetup_id}, qpu_id={self.qpu_id}</p>"
+            + table(
+                {
+                    "Configuration Name": self.name,
+                    "QC Setup": self.qcsetup_name,
+                    "QPU": self.qpu_name,
+                }
+            )
+            + f"<div style='margin-top: 10px;'>{files_note}</div>"
+            + table(
+                {
+                    "Author": self.author_name,
+                    "Machine": self.machine_name,
+                    "Created At": self.created_at,
+                    "Updated At": self.updated_at,
+                }
+            )
+            + (
+                "<div style='margin-top: 10px;'><p><strong>Description</strong></p>"
+                f"<p>{description}</p></div>"
+                if description
+                else ""
+            )
+            + "</div>"
+        )
 
     def save_other_info(
         self, save_dir: Path | str, name_of_other_info: str = "_config_info.json"
@@ -538,24 +601,23 @@ class ConfigurationsResult(BaseModel):
         """Return the previous URL if available, otherwise None."""
         return self.prev_url_parse.geturl() if self.prev_url_parse else None
 
+    def get_configuration(self, configuration_id: int) -> Configuration | None:
+        for config in self.configurations:
+            if config.id == configuration_id:
+                return config
+        return None
+
     def _repr_html_(self) -> str:
         """Render the configurations as an HTML table in Jupyter."""
-
-        def esc(value: Any) -> str:
-            if value is None:
-                return ""
-            if isinstance(value, datetime):
-                value = value.strftime("%Y-%m-%d %H:%M:%S")
-            return html.escape(str(value))
 
         columns_dict = {
             "id": "ID",
             "name": "Name",
-            "category": "Category",
-            "description": "Description",
-            "author_name": "Author",
             "qcsetup_name": "QC Setup",
             # "qpu_name": "QPU",
+            "category": "Category",
+            # "description": "Description",
+            "author_name": "Author",
             "machine_name": "Machine",
             "created_at": "Created",
             "updated_at": "Updated",
@@ -568,12 +630,17 @@ class ConfigurationsResult(BaseModel):
         scope = []
         if self.qcsetup_name is not None or self.qcsetup_id is not None:
             scope_of_id = f"qcsetup_id={esc(self.qcsetup_id)}"
-            scope_of_func = "get_config_by_qpu"
-            scope.append(f"QC setup: {esc(self.qcsetup_name)} ({scope_of_id})")
+            scope_of_func = "get_config_by_qcsetup"
+            scope.append(
+                f"<br /><strong>QC setup: {esc(self.qcsetup_name)} "
+                f"({scope_of_id})</strong>"
+            )
         elif self.qpu_name is not None or self.qpu_id is not None:
             scope_of_id = f"qpu_id={esc(self.qpu_id)}"
             scope_of_func = "get_config_by_qpu"
-            scope.append(f"QPU: {esc(self.qpu_name)} ({scope_of_id})")
+            scope.append(
+                f"<br /><strong>QPU: {esc(self.qpu_name)} ({scope_of_id})</strong>"
+            )
         else:
             scope_of_id = ""
             scope_of_func = ""
@@ -583,14 +650,15 @@ class ConfigurationsResult(BaseModel):
         if self.prev_url_parse:
             prev_page_num = self.page - 1
             pages.append(
-                f"Use <code>{scope_of_func}({scope_of_id}, "
+                f"Use the classmethod of client <code>.{scope_of_func}({scope_of_id}, "
                 + (f"page={prev_page_num}, " if prev_page_num > 1 else "")
                 + f"page_size={self.page_size})</code> to access the previous page"
             )
         if self.next_url_parse:
             next_page_num = self.page + 1
             pages.append(
-                f"Use <code>{scope_of_func}({scope_of_id}, page={next_page_num}, "
+                f"Use the classmethod of client <code>.{scope_of_func}({scope_of_id}, "
+                + f"page={next_page_num}, "
                 + f"page_size={self.page_size})</code> to access the next page"
             )
 
@@ -630,5 +698,9 @@ class ConfigurationsResult(BaseModel):
             f"<thead><tr>{header}</tr></thead>"
             f"<tbody>{rows}</tbody>"
             "</table>"
+            '<div style="margin-top: 4px;">'
+            "The configurations are listed in descending order by their ID. "
+            "Largest ID means the most recently added configuration."
+            "</div>"
             "</div>"
         )
