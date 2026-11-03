@@ -42,6 +42,7 @@ extensions = [
     "sphinxext.opengraph",
     "myst_nb",  # required for JupyterBook-style notebooks
     "sphinx-pydantic",
+    "sphinxcontrib.video"
 ]
 
 # -- Intersphinx mapping ---------------------------------------------------

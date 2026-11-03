@@ -46,6 +46,7 @@ docs = [
     "myst-nb",
     "matplotlib",
     "jupyter-book",
+    "sphinxcontrib-video",
     # theme
     "furo",
     # basic requirements
