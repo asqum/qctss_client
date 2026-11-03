@@ -58,6 +58,7 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 Quick Start <basic_usage/quick_start/index>
 Check Job Status <basic_usage/check_job>
 Make Reservation <basic_usage/make_reservation/index>
+Get Configuration <basic_usage/get_configuration/index>
 Handle Error and Error Response <basic_usage/error_handle>
 
 ```
